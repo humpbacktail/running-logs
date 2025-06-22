@@ -34,32 +34,26 @@ else
 fi
 
 # Step 4: logs/DATE.md を作成
-cat <<EOF > logs/$DATE.md
-# 🏃‍♂️ $DATE のランログ
+# テンプレート読み込みによる .md 作成
+TEMPLATE_FILE="logs/template.md.tpl"
+if [ ! -f "$TEMPLATE_FILE" ]; then
+  echo "❌ テンプレートファイルが見つかりません: $TEMPLATE_FILE"
+  exit 1
+fi
 
-- 距離：
-- 時間：
-- 平均心拍数：
-- 時間帯：
-- 天候：
-- コース：
-- 補給：
-- 睡眠：
-- 今日の目的：
-- コメント：
-
-## 📝 コーチコメント：
-
-## 📸 写真一覧
-EOF
-
-# Step 5: Markdownに画像を追記
+# 画像タグ生成
+IMAGES_MD=""
 for img in images/$DATE/*; do
   BASENAME=$(basename "$img")
-  echo "<img src=\"/images/$DATE/$BASENAME\" width=\"400\" />" >> logs/$DATE.md
+  IMAGES_MD+="<img src=\"/images/$DATE/$BASENAME\" width=\"400\" />"$'\n'
 done
 
-# Step 6: Git操作（add → commit → push）
+# テンプレートを使ってログファイルを作成
+sed -e "s/{{DATE}}/$DATE/g" -e "s|{{IMAGES}}|$IMAGES_MD|g" "$TEMPLATE_FILE" > logs/$DATE.md
+
+
+
+# Step 5: Git操作（add → commit → push）
 git add images/$DATE logs/$DATE.md
 git commit -m "Add log and images for $DATE"
 git push origin main
