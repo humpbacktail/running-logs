@@ -33,8 +33,8 @@ else
   exit 1
 fi
 
-# Step 4: logs/DATE.md を作成
-# テンプレート読み込みによる .md 作成
+# Step 4: logs/DATE.md を作成（テンプレート読み込み）
+
 TEMPLATE_FILE="logs/template.md.tpl"
 if [ ! -f "$TEMPLATE_FILE" ]; then
   echo "❌ テンプレートファイルが見つかりません: $TEMPLATE_FILE"
@@ -48,14 +48,12 @@ for img in images/$DATE/*; do
   IMAGES_MD+=$(printf '<img src="/images/%s/%s" width="400" />\n' "$DATE" "$BASENAME")
 done
 
-# テンプレートを使ってログファイルを作成（awkで置換）
-awk -v date="$DATE" -v images="$IMAGES_MD" '
-{
-  gsub("{{DATE}}", date)
-  gsub("{{IMAGES}}", images)
-  print
-}
-' "$TEMPLATE_FILE" > logs/$DATE.md
+# 環境変数に登録してテンプレートに差し込み
+export DATE
+export IMAGES="$IMAGES_MD"
+
+# envsubst を使ってテンプレートからログを作成
+envsubst < "$TEMPLATE_FILE" > logs/$DATE.md
 
 
 
