@@ -41,15 +41,21 @@ if [ ! -f "$TEMPLATE_FILE" ]; then
   exit 1
 fi
 
-# 画像タグ生成
+# 画像タグ生成（改行含む文字列を1つの変数に）
 IMAGES_MD=""
 for img in images/$DATE/*; do
   BASENAME=$(basename "$img")
-  IMAGES_MD+="<img src=\"/images/$DATE/$BASENAME\" width=\"400\" />"$'\n'
+  IMAGES_MD+=$(printf '<img src="/images/%s/%s" width="400" />\n' "$DATE" "$BASENAME")
 done
 
-# テンプレートを使ってログファイルを作成
-sed -e "s/{{DATE}}/$DATE/g" -e "s|{{IMAGES}}|$IMAGES_MD|g" "$TEMPLATE_FILE" > logs/$DATE.md
+# テンプレートを使ってログファイルを作成（awkで置換）
+awk -v date="$DATE" -v images="$IMAGES_MD" '
+{
+  gsub("{{DATE}}", date)
+  gsub("{{IMAGES}}", images)
+  print
+}
+' "$TEMPLATE_FILE" > logs/$DATE.md
 
 
 
