@@ -2,6 +2,7 @@
 
 # エラーが起きたら中断する
 set -e
+
 echo "🔧 スクリプト開始（$(date））"
 echo "PATH=$PATH"
 echo "引数：$1"
@@ -9,7 +10,7 @@ echo "カレントディレクトリ：$(pwd)"
 echo "upload/$1 の中身："
 ls -la "upload/$1" || echo "⚠️ upload/$1 フォルダなし"
 
-echo "🌀 1. GitHubの最新状態を取得（pull）..."
+echo "🌀 1. GitHubの最新状態を取得（pull --rebase）..."
 
 # ローカルに未コミットの変更があると pull が失敗するので確認
 if ! git diff-index --quiet HEAD --; then
@@ -17,10 +18,9 @@ if ! git diff-index --quiet HEAD --; then
   exit 1
 fi
 
-# pull で GitHub 上の変更をローカルに取り込む
-git pull origin main
-
-echo "✅ pull 完了"
+# pull --rebase で GitHub 上の変更をローカルに取り込む
+git pull --rebase origin main
+echo "✅ pull --rebase 完了"
 
 # Step 1: 日付を受け取る（なければ今日の日付）
 DATE=${1:-$(date "+%Y-%m-%d")}
@@ -31,7 +31,7 @@ mkdir -p "logs"
 
 # Step 3: upload/DATE にあるファイルを images/DATE に移動
 if [ -d "upload/$DATE" ]; then
-  shopt -s nullglob  # 空ディレクトリでもエラーにならないようにする
+  shopt -s nullglob
   mv upload/$DATE/* images/$DATE/
   rmdir upload/$DATE 2>/dev/null || echo "（info）空でないため upload/$DATE は削除されませんでした"
 else
@@ -40,14 +40,13 @@ else
 fi
 
 # Step 4: logs/DATE.md を作成（テンプレート読み込み）
-
 TEMPLATE_FILE="logs/template.md.tpl"
 if [ ! -f "$TEMPLATE_FILE" ]; then
   echo "❌ テンプレートファイルが見つかりません: $TEMPLATE_FILE"
   exit 1
 fi
 
-# 画像タグ生成（改行含む文字列を1つの変数に）
+# 画像タグ生成
 IMAGES_MD=""
 for img in images/$DATE/*; do
   BASENAME=$(basename "$img")
@@ -58,17 +57,12 @@ done
 export DATE
 export IMAGES="$IMAGES_MD"
 
-# ここを以下に置き換える！
-# envsubst を使ってテンプレートからログを作成
 /opt/anaconda3/bin/envsubst < "$TEMPLATE_FILE" > logs/$DATE.md
 
-
-# Step 5: Git操作（add → commit → push）
+# Step 5: Git操作
 git add images/$DATE logs/$DATE.md
 git commit -m "Add log and images for $DATE"
 git push origin main
 
 echo "✅ $DATE のログをGitHubにアップしました！"
 echo "🚀 upload_log.sh 完了！"
-
-
