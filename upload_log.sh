@@ -2,6 +2,12 @@
 
 # エラーが起きたら中断する
 set -e
+echo "🔧 スクリプト開始（$(date））"
+echo "PATH=$PATH"
+echo "引数：$1"
+echo "カレントディレクトリ：$(pwd)"
+echo "upload/$1 の中身："
+ls -la "upload/$1" || echo "⚠️ upload/$1 フォルダなし"
 
 echo "🌀 1. GitHubの最新状態を取得（pull）..."
 
@@ -52,9 +58,9 @@ done
 export DATE
 export IMAGES="$IMAGES_MD"
 
+# ここを以下に置き換える！
 # envsubst を使ってテンプレートからログを作成
-envsubst < "$TEMPLATE_FILE" > logs/$DATE.md
-
+/opt/anaconda3/bin/envsubst < "$TEMPLATE_FILE" > logs/$DATE.md
 
 
 # Step 5: Git操作（add → commit → push）
