@@ -3,7 +3,7 @@
 # エラーが起きたら中断する
 set -e
 
-echo "🔧 スクリプト開始（$(date））"
+echo "🔧 スクリプト開始（$(date)）"
 echo "PATH=$PATH"
 echo "引数：$1"
 echo "カレントディレクトリ：$(pwd)"
