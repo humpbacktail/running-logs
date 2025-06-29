@@ -45,10 +45,18 @@ for img in images/$DATE/*; do
   IMAGES_MD+=$(printf '<img src="/images/%s/%s" width="400" />\n' "$DATE" "$BASENAME")
 done
 
+# 環境変数に登録してテンプレートに差し込み
 export DATE
 export IMAGES="$IMAGES_MD"
 
+# すでにログファイルが存在していたら上書きせず終了
+if [ -f "logs/$DATE.md" ]; then
+  echo "⚠️ logs/$DATE.md は既に存在しています。上書きを避けるため中止します。"
+  exit 1
+fi
+
 /opt/anaconda3/bin/envsubst < "$TEMPLATE_FILE" > logs/$DATE.md
+
 
 git add images/$DATE logs/$DATE.md
 git commit -m "Add log and images for $DATE"
