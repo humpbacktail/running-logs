@@ -1,38 +1,30 @@
 #!/bin/bash
+
 set -e
-set -x
 
-# 引数チェック
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 YYYY-MM-DD"
-  exit 1
-fi
+# 日付を指定（例：2025-06-30）
+export DATE=$(basename "$(find upload -mindepth 1 -maxdepth 1 -type d | head -n 1)")
 
-DATE=$1
-SRC_DIR="upload/${DATE}"
-DEST_DIR="images/${DATE}"
+# パス定義
+UPLOAD_DIR="upload/${DATE}"
+IMAGE_DIR="images/${DATE}"
 LOG_FILE="logs/${DATE}.md"
-URL_PATH="images/${DATE}"
+TEMPLATE_FILE="logs/template.md.tpl"
 
-# 画像元フォルダが存在するかチェック
-if [ ! -d "${SRC_DIR}" ]; then
-  echo "Error: ${SRC_DIR} not found."
-  exit 1
-fi
+# フォルダがなければ作成
+mkdir -p "${IMAGE_DIR}"
 
-# 画像移動
-mkdir -p "${DEST_DIR}"
-mv "${SRC_DIR}"/* "${DEST_DIR}/"
+# アップロード画像を images/ に移動
+mv "${UPLOAD_DIR}"/* "${IMAGE_DIR}/"
 
-# Markdown生成
-{
-  echo "# Run Log: ${DATE}"
-  echo ""
-  for img in ${DEST_DIR}/*; do
-    filename=$(basename "${img}")
-    echo "![${filename}](${URL_PATH}/${filename})"
-    echo ""
-  done
-} > "${LOG_FILE}"
+# 画像のMarkdownリンク生成
+IMAGES_BLOCK=""
+for img in "${IMAGE_DIR}"/*; do
+  filename=$(basename "${img}")
+  IMAGES_BLOCK+="![${filename}](images/${DATE}/${filename})"$'\n\n'
+done
 
-echo "✅ Markdown created: ${LOG_FILE}"
+# テンプレートから変数置換して .md 作成
+sed -e "s|\${DATE}|${DATE}|g" -e "s|\${IMAGES}|${IMAGES_BLOCK}|g" "${TEMPLATE_FILE}" > "${LOG_FILE}"
+
+echo "✅ ログファイル生成完了: ${LOG_FILE}"
