@@ -20,8 +20,7 @@ else
   echo "⚠️ ${UPLOAD_DIR} が存在しないか空のため、画像移動をスキップします"
 fi
 
-
-# 画像のMarkdownリンク生成を一時ファイルに書き出す（改行対応のため）
+# 画像のMarkdownリンク生成を一時ファイルに書き出す
 TEMP_IMG_BLOCK=$(mktemp)
 for img in "${IMAGE_DIR}"/*; do
   filename=$(basename "${img}")
@@ -29,11 +28,16 @@ for img in "${IMAGE_DIR}"/*; do
   echo "" >> "${TEMP_IMG_BLOCK}"
 done
 
-# テンプレートを一時ファイルに変換（変数はプレースホルダで置換）
+# テンプレートの内容を仮置き（DATEだけ置換）
 TEMP_TEMPLATE=$(mktemp)
-sed -e "s|\${DATE}|${DATE}|g" -e "s|${IMAGES}|${IMAGES_BLOCK}|g" "${TEMPLATE_FILE}" > "${LOG_FILE}"
+awk -v date="${DATE}" '
+  {
+    gsub(/\$\{DATE\}/, date);
+    print;
+  }
+' "${TEMPLATE_FILE}" > "${TEMP_TEMPLATE}"
 
-# 画像ブロックを挿入（${IMAGES} を置換）
+# IMAGES プレースホルダを画像ブロックで置換して .md 出力
 awk -v img_block="$(cat "${TEMP_IMG_BLOCK}")" '
   {
     if ($0 ~ /\${IMAGES}/) {
