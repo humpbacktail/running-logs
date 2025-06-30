@@ -26,7 +26,7 @@ done
 
 # テンプレートを一時ファイルに変換（変数はプレースホルダで置換）
 TEMP_TEMPLATE=$(mktemp)
-sed "s|\${DATE}|${DATE}|g" "${TEMPLATE_FILE}" > "${TEMP_TEMPLATE}"
+sed -e "s|\${DATE}|${DATE}|g" -e "s|${IMAGES}|${IMAGES_BLOCK}|g" "${TEMPLATE_FILE}" > "${LOG_FILE}"
 
 # 画像ブロックを挿入（${IMAGES} を置換）
 awk -v img_block="$(cat "${TEMP_IMG_BLOCK}")" '
