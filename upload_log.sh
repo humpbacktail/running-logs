@@ -13,8 +13,13 @@ TEMPLATE_FILE="logs/template.md.tpl"
 # フォルダ作成
 mkdir -p "${IMAGE_DIR}"
 
-# アップロード画像を images/ に移動
-mv "${UPLOAD_DIR}"/* "${IMAGE_DIR}/"
+# アップロード画像を images/ に移動（存在チェック付き）
+if [ -d "${UPLOAD_DIR}" ] && [ "$(ls -A "${UPLOAD_DIR}")" ]; then
+  mv "${UPLOAD_DIR}"/* "${IMAGE_DIR}/"
+else
+  echo "⚠️ ${UPLOAD_DIR} が存在しないか空のため、画像移動をスキップします"
+fi
+
 
 # 画像のMarkdownリンク生成を一時ファイルに書き出す（改行対応のため）
 TEMP_IMG_BLOCK=$(mktemp)
