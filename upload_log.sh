@@ -1,8 +1,14 @@
 #!/bin/bash
 set -e
 
-# 日付抽出
-export DATE=$(basename "$(find upload -mindepth 1 -maxdepth 1 -type d | head -n 1)")
+# 日付抽出（upload配下のディレクトリから）
+DATE=$(basename "$(find upload -mindepth 1 -maxdepth 1 -type d | head -n 1)")
+
+# 空チェック
+if [ -z "$DATE" ]; then
+  echo "❌ upload/ 以下に日付フォルダが見つかりません"
+  exit 1
+fi
 
 UPLOAD_DIR="upload/${DATE}"
 IMAGE_DIR="images/${DATE}"
@@ -25,7 +31,7 @@ for img in "${IMAGE_DIR}"/*; do
   IMG_BLOCK+=$'\n'"![${filename}](images/${DATE}/${filename})"$'\n'
 done
 
-# テンプレートを読み込み、変数を置換
+# テンプレートからMarkdownを生成
 sed -e "s|\${DATE}|${DATE}|g" \
     -e "s|\${IMAGES}|${IMG_BLOCK}|g" \
     "$TEMPLATE_FILE" > "$LOG_FILE"
