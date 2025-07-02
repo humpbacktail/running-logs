@@ -1,3 +1,5 @@
+# Macの不要ファイル
 .DS_Store
-.DS_Store
-# upload/
+
+# アップロード作業用フォルダ（Git管理しない）
+upload/
