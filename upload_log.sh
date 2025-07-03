@@ -46,27 +46,38 @@ else
 fi
 
 # 画像リンク生成
-IMG_BLOCK=""
-# for ループの前に、images フォルダ内にファイルがあるか確認
+# TEMP_IMG_BLOCK を使ってファイルに書き出し、awk にはファイルの中身を渡す
+TEMP_IMG_BLOCK=$(mktemp)
 if compgen -G "${IMAGE_DIR}/*" > /dev/null; then
-    # 各画像リンクの後に改行を一つだけ追加。
-    # テンプレートの ${IMAGES} の直後に画像リストが来るため、最初の改行は不要な場合が多い。
-    # 必要に応じて $'n' を先頭に追加しても良い。
     for img in "${IMAGE_DIR}"/*; do
       filename=$(basename "$img")
-      IMG_BLOCK+="![${filename}](images/${DATE}/${filename})"$'\n'
+      echo "![${filename}](images/${DATE}/${filename})" >> "${TEMP_IMG_BLOCK}"
     done
 else
-    IMG_BLOCK="（写真なし）" # 画像がない場合の代替テキスト
+    echo "（写真なし）" >> "${TEMP_IMG_BLOCK}" # 画像がない場合の代替テキスト
     echo "ℹ️ ${IMAGE_DIR} に画像が見つかりませんでした。"
 fi
 
 
 # テンプレートを読み込み、置換してMarkdown生成
 echo "📝 Markdownファイルを生成中: ${LOG_FILE}"
-sed -e "s|\${DATE}|${DATE}|g" \
-    -e "s|\${IMAGES}|${IMG_BLOCK}|g" \
-    "$TEMPLATE_FILE" > "$LOG_FILE"
+# awk を1回で処理することで効率化
+awk -v date_var="${DATE}" -v images_block_var="$(cat "${TEMP_IMG_BLOCK}")" '
+  {
+    # 現在の行を変数にコピーして操作
+    line = $0;
+    gsub(/\$\{DATE\}/, date_var, line); # ${DATE} を置換
+    # ${IMAGES} が行に含まれる場合、画像ブロックを挿入
+    # sub() は最初の一致のみを置換
+    if (line ~ /\$\{IMAGES\}/) {
+      sub(/\$\{IMAGES\}/, images_block_var, line);
+    }
+    print line; # 変更された行を出力
+  }
+' "${TEMPLATE_FILE}" > "${LOG_FILE}"
+
+# 後片付け
+rm "${TEMP_IMG_BLOCK}"
 
 echo "✅ Markdownログ生成完了: $LOG_FILE"
 
