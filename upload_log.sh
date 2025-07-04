@@ -2,7 +2,6 @@
 set -e
 
 # 日付抽出（upload配下の最初のディレクトリ名を取得）
-# find の結果を sort することで、日付形式であれば昇順（一番古い日付）が選択される
 DATE=$(basename "$(find upload -mindepth 1 -maxdepth 1 -type d | sort | head -n 1)")
 
 # 空チェック
@@ -45,8 +44,7 @@ else
   exit 0
 fi
 
-# 画像リンク生成
-# TEMP_IMG_BLOCK を使ってファイルに書き出し、awk にはファイルの中身を渡す
+# 画像リンク生成 (awkに渡すため一時ファイルに書き出す)
 TEMP_IMG_BLOCK=$(mktemp)
 if compgen -G "${IMAGE_DIR}/*" > /dev/null; then
     for img in "${IMAGE_DIR}"/*; do
@@ -61,8 +59,21 @@ fi
 
 # テンプレートを読み込み、置換してMarkdown生成
 echo "📝 Markdownファイルを生成中: ${LOG_FILE}"
-# awk を1回で処理することで効率化
-awk -v date_var="${DATE}" -v images_block_var="$(cat "${TEMP_IMG_BLOCK}")" '
+
+# awk を1回で処理。画像ブロックはファイルから読み込む。
+awk -v date_var="${DATE}" -v temp_img_file="${TEMP_IMG_BLOCK}" '
+  BEGIN {
+    # テンプレート処理の開始時に画像ブロックの内容を全て読み込む
+    images_block_content = "";
+    while ((getline line < temp_img_file) > 0) {
+      images_block_content = images_block_content line "\n";
+    }
+    close(temp_img_file); # ファイルを閉じる
+    # 最後の不要な改行を削除（もしあれば）
+    if (length(images_block_content) > 0) {
+      sub(/\n$/, "", images_block_content);
+    }
+  }
   {
     # 現在の行を変数にコピーして操作
     line = $0;
@@ -70,7 +81,7 @@ awk -v date_var="${DATE}" -v images_block_var="$(cat "${TEMP_IMG_BLOCK}")" '
     # ${IMAGES} が行に含まれる場合、画像ブロックを挿入
     # sub() は最初の一致のみを置換
     if (line ~ /\$\{IMAGES\}/) {
-      sub(/\$\{IMAGES\}/, images_block_var, line);
+      sub(/\$\{IMAGES\}/, images_block_content, line);
     }
     print line; # 変更された行を出力
   }
