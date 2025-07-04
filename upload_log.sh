@@ -49,7 +49,8 @@ TEMP_IMG_BLOCK=$(mktemp)
 if compgen -G "${IMAGE_DIR}/*" > /dev/null; then
     for img in "${IMAGE_DIR}"/*; do
       filename=$(basename "$img")
-      echo "![${filename}](images/${DATE}/${filename})" >> "${TEMP_IMG_BLOCK}"
+      # ここをHTMLの<img>タグ形式に修正
+      echo '<img src="/images/'"${DATE}"'/'"${filename}"'" width="400" />' >> "${TEMP_IMG_BLOCK}"
     done
 else
     echo "（写真なし）" >> "${TEMP_IMG_BLOCK}" # 画像がない場合の代替テキスト
