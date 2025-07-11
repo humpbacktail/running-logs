@@ -30,21 +30,21 @@ def parse_log_file(filepath):
             except ValueError:
                 pass # 数値変換エラーはスキップ
 
-
-    # 時間の抽出 (HH:MM または HH時間MM分 形式に対応)
+# 時間の抽出 (HH:MM または HH時間MM分 形式に対応)
         time_match_hm = re.search(r'^- 時間：([0-9]+):([0-9]+)', content, re.MULTILINE)
         time_match_jp = re.search(r'^- 時間：(?:([0-9]+)時間)?(?:([0-9]+)分)?', content, re.MULTILINE)
 
         if time_match_hm: # HH:MM 形式の場合
-            hours = int(time_match_hm.group(1)) if time_match_hm.group(1) else 0
-            minutes = int(time_match_hm.group(2)) if time_match_hm.group(2) else 0
-            total_seconds = hours * 3600 + minutes * 60
+            minutes = int(time_match_hm.group(1)) if time_match_hm.group(1) else 0 # <- ここを修正
+            seconds = int(time_match_hm.group(2)) if time_match_hm.group(2) else 0 # <- ここを修正
+            total_seconds = minutes * 60 + seconds # <- ここを修正
         elif time_match_jp: # HH時間MM分 形式の場合
             hours = int(time_match_jp.group(1)) if time_match_jp.group(1) else 0
             minutes = int(time_match_jp.group(2)) if time_match_jp.group(2) else 0
             total_seconds = hours * 3600 + minutes * 60
         else:
             total_seconds = 0 # どちらの形式にもマッチしない場合
+
     
     return distance_km, total_seconds
 
