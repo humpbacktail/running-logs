@@ -101,7 +101,7 @@ rm "${TEMP_IMG_BLOCK}"
 
 echo "✅ Markdownログ生成完了: ${LOG_FILE}"
 
----
+# ---
 
 ### 📝 README.md の記録一覧を更新
 
@@ -174,7 +174,7 @@ echo "✅ README.md の記録一覧を更新しました。"
 # --- 📊 月間サマリーを更新 (Pythonスクリプトを呼び出し) ---
 /usr/bin/env python3 scripts/update_monthly_summary.py
 
----
+# ---
 
 # 🚀 Git 操作（add → commit → push）
 
