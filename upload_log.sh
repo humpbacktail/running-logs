@@ -97,7 +97,7 @@ awk -v date_var="${DATE}" -v temp_img_file="${TEMP_IMG_BLOCK}" '
 ' "${TEMPLATE_FILE}" > "${LOG_FILE}"
 
 # 後片付け
-rm "${TEMP_IMG_BLOCK}"
+rm "${TEMP_IMG_BLOCK}" || true # ここを修正
 
 echo "✅ Markdownログ生成完了: ${LOG_FILE}"
 
@@ -167,7 +167,7 @@ in_log_list_section && /^---$/ {
 mv "${TEMP_README_UPDATED}" "${README_FILE}"
 
 # 後片付け
-rm "${TEMP_README_LINKS}" "${TEMP_README_UPDATED}"
+rm "${TEMP_README_LINKS}" "${TEMP_README_UPDATED}" || true # ここを修正
 
 echo "✅ README.md の記録一覧を更新しました。"
 
@@ -181,7 +181,8 @@ echo "✅ README.md の記録一覧を更新しました。"
 echo "🚀 GitHubにアップロード中..."
 
 # 新しいログファイル、画像ディレクトリ、そして更新された README.md を追加
-git add "$LOG_FILE" "$IMAGE_DIR" "$README_FILE"
+# すべてのファイル変更が完了した後に git add を実行する
+git add "$LOG_FILE" "$IMAGE_DIR" "$README_FILE" # この行の位置を調整
 
 # コミット対象の変更があるか確認
 if git diff-index --quiet HEAD --; then
