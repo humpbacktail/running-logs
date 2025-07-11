@@ -30,21 +30,22 @@ def parse_log_file(filepath):
             except ValueError:
                 pass # 数値変換エラーはスキップ
 
-# 時間の抽出 (HH:MM または HH時間MM分 形式に対応)
-        time_match_hm = re.search(r'^- 時間：([0-9]+):([0-9]+)', content, re.MULTILINE)
-        time_match_jp = re.search(r'^- 時間：(?:([0-9]+)時間)?(?:([0-9]+)分)?', content, re.MULTILINE)
 
-        if time_match_hm: # HH:MM 形式の場合
-            minutes = int(time_match_hm.group(1)) if time_match_hm.group(1) else 0 # <- ここを修正
-            seconds = int(time_match_hm.group(2)) if time_match_hm.group(2) else 0 # <- ここを修正
-            total_seconds = minutes * 60 + seconds # <- ここを修正
-        elif time_match_jp: # HH時間MM分 形式の場合
-            hours = int(time_match_jp.group(1)) if time_match_jp.group(1) else 0
-            minutes = int(time_match_jp.group(2)) if time_match_jp.group(2) else 0
-            total_seconds = hours * 3600 + minutes * 60
-        else:
-            total_seconds = 0 # どちらの形式にもマッチしない場合
+# 時間の抽出 (HH:MM:SS 形式に統一)
+        time_match_hms = re.search(r'^- 時間：([0-9]+):([0-9]+):([0-9]+)', content, re.MULTILINE)
+        time_match_ms = re.search(r'^- 時間：([0-9]+):([0-9]+)', content, re.MULTILINE) # MM:SS形式 (分:秒)
 
+        total_seconds = 0
+        if time_match_hms: # HH:MM:SS 形式の場合 (例: 01:05:52)
+            hours = int(time_match_hms.group(1))
+            minutes = int(time_match_hms.group(2))
+            seconds = int(time_match_hms.group(3))
+            total_seconds = hours * 3600 + minutes * 60 + seconds
+        elif time_match_ms: # MM:SS 形式の場合 (例: 45:13)
+            minutes = int(time_match_ms.group(1))
+            seconds = int(time_match_ms.group(2))
+            total_seconds = minutes * 60 + seconds
+        # それ以外の形式（HH時間MM分など）は、この新しい統一ルールでは無視される
     
     return distance_km, total_seconds
 
