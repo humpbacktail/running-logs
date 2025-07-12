@@ -17,7 +17,7 @@ echo "✅ GitHub同期完了"
 # ここでは、最新の変更があったログファイルを対象とすることを想定します。
 # あるいは、手動入力したMDファイルが一つだけ新しいものとして検出される前提です。
 # もし複数のMDファイルが同時に手入力された場合、全てを Git に追加することになります。
-LAST_MODIFIED_LOG=$(find logs -maxdepth 1 -name "*.md" ! -name "README.md" -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2-)
+LAST_MODIFIED_LOG=$(ls -t logs/*.md 2>/dev/null | grep -v "README.md" | head -1)
 
 if [ -z "$LAST_MODIFIED_LOG" ]; then
     echo "❌ logs/ ディレクトリ内に処理対象のログファイルが見つかりませんでした。処理を中止します。"
