@@ -12,29 +12,31 @@ if [ -z "$LAST_MODIFIED_LOG" ]; then
     exit 1
 fi
 
-DATE=$(basename "${LAST_MODIFIED_LOG%.md}") # 例: 2025-07-14
+DATE=$(basename "${LAST_MODIFIED_LOG%.md}") # 例: 2025-07-15
 
 LOG_FILE="logs/${DATE}.md"
 IMAGE_DIR="images/${DATE}" # 画像ディレクトリは既に存在し、画像も移動済み
 README_FILE="README.md"
 
-# --- 1.5 新規ファイルをステージングしてから同期 (安全対策) ---
+# --- 2. GitHubの最新状態を確認・同期 ---
+echo "🌀 GitHubの最新状態を確認中..."
+# ここで、未ステージングの変更がないかのみをチェックする
+# （新しいログファイルはまだステージングされていないので、このチェックには引っかからない）
+if ! git diff --quiet; then
+  echo "⚠️ ローカルに未ステージングの変更があります。先に commit か stash してください。"
+  exit 1
+fi
+
+# Git pull --rebase は、ステージングエリアがクリーンな状態で実行する必要がある
+git pull --rebase origin main
+echo "✅ GitHub同期完了"
+
+# --- 2.5 新規ファイルをステージング (Git同期後) ---
 # create_log_entry.sh で作成された新しいファイルやディレクトリをステージングする
 echo "🌀 新規ログファイルと画像ディレクトリをステージング中..."
 git add "$LOG_FILE" "$IMAGE_DIR" || true # 新規ファイルが存在しない場合もエラーにならないように || true を追加
 echo "✅ 新規ファイルのステージング完了"
 
-# --- 2. GitHubの最新状態を確認・同期 ---
-echo "🌀 GitHubの最新状態を確認中..."
-# ここで、未ステージングの変更がないかのみをチェックする
-# （ステージング済みの変更は、このスクリプトでコミットされることを想定しているため）
-if ! git diff --quiet; then # <-- ここを変更しました！
-  echo "⚠️ ローカルに未ステージングの変更があります。先に commit か stash してください。"
-  exit 1
-fi
-
-git pull --rebase origin main
-echo "✅ GitHub同期完了"
 
 # --- 3. README.md の記録一覧と月間サマリーを更新 (Pythonスクリプトを呼び出し) ---
 /usr/bin/env python3 scripts/update_monthly_summary.py
