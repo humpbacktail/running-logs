@@ -3,26 +3,19 @@
 import os
 import re
 import datetime
-import traceback # エラー表示用に追加
+import traceback
 
 # 設定
 LOGS_DIR = 'logs'
 README_FILE = 'README.md'
 
 # README.md 内のセクションマーカー
-RECORD_LIST_SECTION_START = '## 📅 記録一覧（リンク付き）' # README.md の見た目上のヘッダー
-RECORD_LIST_SECTION_END = '---' # 記録一覧セクションの次の水平線
+# これらのマーカーは README.md ファイル内に手動で追加する必要があります
+RECORD_LIST_SECTION_START = ''
+RECORD_LIST_SECTION_END = ''
 
-SUMMARY_SECTION_START = '## 📊 月間サマリー' # README.md の見た目上のヘッダー
-SUMMARY_SECTION_END = '---' # 月間サマリーセクションの次の水平線
-
-# Pythonスクリプトの内部で利用する、より具体的なマーカー
-# README.md の中に手動でこれらのコメントを追加する必要があります
-INTERNAL_RECORD_LIST_MARKER_START = ''
-INTERNAL_RECORD_LIST_MARKER_END = ''
-
-INTERNAL_SUMMARY_MARKER_START = ''
-INTERNAL_SUMMARY_MARKER_END = ''
+SUMMARY_SECTION_START = ''
+SUMMARY_SECTION_END = ''
 
 
 def parse_log_file(filepath):
@@ -83,6 +76,7 @@ def calculate_pace(total_seconds, total_km):
 def generate_record_list_html():
     """
     logsディレクトリからデータを読み込み、年/月ごとにグループ化されたHTML形式の記録一覧を生成する。
+    ファイル名が YYYY-MM-DD-NN.md の形式に対応。
     """
     records_by_year_month = {} # キー: 'YYYY-MM', 値: リスト of (datetime_obj_for_sorting, full_identifier_str, display_date_str, log_file_path)
 
@@ -94,7 +88,7 @@ def generate_record_list_html():
             full_identifier = filename.replace('.md', '')
             
             # YYYY-MM-DD 部分のみを抽出 (例: 2025-07-30)
-            log_date_only_str = full_identifier.rsplit('-', 1)[0] if '-' in full_identifier and full_identifier.rsplit('-', 1)[1].isdigit() else full_identifier
+            log_date_only_str = full_identifier.rsplit('-', 1)[0] # rsplitで右から1回だけ分割 (例: 2025-07-30-01 -> 2025-07-30)
 
             try:
                 # ソートと月キー取得のために YYYY-MM-DD をパース
@@ -104,12 +98,15 @@ def generate_record_list_html():
                 year_month_key = log_date_obj.strftime('%Y-%m') 
                 
                 # 表示用日付 (例: 2025年07月30日-01)
-                display_date = f"{log_date_obj.strftime('%Y年%m月%d日')}-{full_identifier.rsplit('-', 1)[1]}" if '-' in full_identifier and full_identifier.rsplit('-', 1)[1].isdigit() else log_date_obj.strftime('%Y年%m月%d日')
+                # 連番部分を安全に取得するためにチェックを追加
+                num_part = full_identifier.rsplit('-', 1)[1] if '-' in full_identifier and full_identifier.rsplit('-', 1)[1].isdigit() else None
+                if num_part:
+                    display_date = f"{log_date_obj.strftime('%Y年%m月%d日')}-{num_part}"
+                else: # 連番がない場合（既存のログファイルなど）
+                    display_date = log_date_obj.strftime('%Y年%m月%d日')
 
                 # ソート用オブジェクトの作成: 日付（降順）、連番（降順）
-                # 2025-07-30-02 は 2025-07-30-01 より前に来るように
-                # datetimeオブジェクトに連番を追加してソートキーとする
-                sort_key = (log_date_obj, int(full_identifier.rsplit('-', 1)[1]) if '-' in full_identifier and full_identifier.rsplit('-', 1)[1].isdigit() else 0)
+                sort_key = (log_date_obj, int(num_part) if num_part else 0)
 
             except ValueError:
                 continue # 不正なファイル名はスキップ
@@ -175,6 +172,7 @@ def generate_monthly_summary():
             full_identifier = filename.replace('.md', '')
             
             # 月キー取得のために YYYY-MM-DD 部分のみを抽出 (例: 2025-07-30)
+            # 連番がない場合も考慮 (例: YYYY-MM-DD.md 形式のファイル)
             log_date_only_str = full_identifier.rsplit('-', 1)[0] if '-' in full_identifier and full_identifier.rsplit('-', 1)[1].isdigit() else full_identifier
 
             try:
@@ -215,8 +213,8 @@ def update_readme_sections(record_list_content, summary_content):
     README.mdの記録一覧と月間サマリーセクションを新しい内容で更新する。
     """
     readme_content_lines = [] # 最終的にファイルに書き込む行のリスト
-    in_record_list_replace_block = False
-    in_summary_replace_block = False
+    in_replacement_block = False # 置換ブロックの中にいるかどうかのフラグ
+    current_section_start = None
 
     with open(README_FILE, 'r', encoding='utf-8') as f:
         for line in f:
@@ -224,34 +222,39 @@ def update_readme_sections(record_list_content, summary_content):
 
             # 記録一覧セクションの処理
             if stripped_line == RECORD_LIST_SECTION_START:
-                readme_content_lines.append(line.rstrip('\n')) # 元の行（改行あり）を追加
-                readme_content_lines.append(record_list_content) # 新しい記録一覧を挿入
-                in_record_list_replace_block = True # ここから置換ブロックに入る
-                continue # 次の行へ
-            elif stripped_line == RECORD_LIST_SECTION_END:
-                readme_content_lines.append(line.rstrip('\n')) # 元の行（改行あり）を追加
-                in_record_list_replace_block = False # 置換ブロックから出る
-                continue # 次の行へ
+                readme_content_lines.append(line) # 開始マーカーをそのまま追加
+                readme_content_lines.append(record_list_content + '\n') # 新しい記録一覧を挿入 (末尾に改行を追加)
+                in_replacement_block = True
+                current_section_start = RECORD_LIST_SECTION_START
+                continue
+            elif stripped_line == RECORD_LIST_SECTION_END and current_section_start == RECORD_LIST_SECTION_START:
+                readme_content_lines.append(line) # 終了マーカーをそのまま追加
+                in_replacement_block = False
+                current_section_start = None
+                continue
 
             # 月間サマリーセクションの処理
             if stripped_line == SUMMARY_SECTION_START:
-                readme_content_lines.append(line.rstrip('\n')) # 元の行（改行あり）を追加
-                readme_content_lines.append(summary_content) # 新しいサマリーを挿入
-                in_summary_replace_block = True # ここから置換ブロックに入る
+                # このセクションヘッダーが RECORD_LIST_SECTION_START と間違って解釈されないように、
+                # ここに到達する前に RECORD_LIST_SECTION_END が処理されていることを確認
+                readme_content_lines.append(line) # 開始マーカーをそのまま追加
+                readme_content_lines.append(summary_content + '\n') # 新しいサマリーを挿入 (末尾に改行を追加)
+                in_replacement_block = True
+                current_section_start = SUMMARY_SECTION_START
                 continue
-            elif stripped_line == SUMMARY_SECTION_END:
-                readme_content_lines.append(line.rstrip('\n')) # 元の行（改行あり）を追加
-                in_summary_replace_block = False # 置換ブロックから出る
+            elif stripped_line == SUMMARY_SECTION_END and current_section_start == SUMMARY_SECTION_START:
+                readme_content_lines.append(line) # 終了マーカーをそのまま追加
+                in_replacement_block = False
+                current_section_start = None
                 continue
 
             # 置換ブロック内でなければ、元の行をそのまま追加
-            # stripping newline here, will add back later
-            readme_content_lines.append(line.rstrip('\n')) # 元の行をそのまま追加 (改行は後で追加)
+            if not in_replacement_block:
+                readme_content_lines.append(line) # 元の行をそのまま追加 (改行も含む)
 
     # ファイルに書き込み
-    with open(README_FILE, 'w', encoding='utf-8', newline='\n') as f: # newline='\n' で改行コードを統一
-        for line_to_write in readme_content_lines:
-            f.write(line_to_write + '\n') # 各要素の末尾に改行を追加して書き込む
+    with open(README_FILE, 'w', encoding='utf-8', newline='\n') as f:
+        f.writelines(readme_content_lines) # リストの各要素が既に改行を含んでいるので writelines を使用
 
 if __name__ == "__main__":
     print("📝 README.md の記録一覧と月間サマリーを更新中 (Pythonスクリプト)...")
