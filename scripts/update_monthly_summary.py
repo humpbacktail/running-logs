@@ -9,16 +9,15 @@ import traceback
 LOGS_DIR = 'logs'
 README_FILE = 'README.md'
 
-# README.md 内のセクションマーカー
-RECORD_LIST_SECTION_START = ''
-RECORD_LIST_SECTION_END = ''
+# README.md 内のセクションマーカーを、Pythonスクリプトが認識する正確な文字列に定義
+# これらは README.md ファイル内に手動で追加するコメント形式のマーカーと一致させる
+RECORD_LIST_SECTION_START_MARKER = ''
+RECORD_LIST_SECTION_END_MARKER = ''
 
-SUMMARY_SECTION_START = ''
-SUMMARY_SECTION_END = ''
+SUMMARY_SECTION_START_MARKER = ''
+SUMMARY_SECTION_END_MARKER = ''
 
-# 直近N件の表示は今回は行わないため、この行は削除またはコメントアウト
-# NUM_RECENT_LOGS = 10 
-
+# --- 関数定義 ---
 
 def parse_log_file(filepath):
     """
@@ -75,21 +74,20 @@ def calculate_pace(total_seconds, total_km):
     
     return f"{pace_minutes}'{pace_seconds:02d}/km"
 
-def generate_record_list_html():
+def generate_record_list_markdown(): # 名前をhtmlからmarkdownに変更
     """
     logsディレクトリからデータを読み込み、全てのログをシンプルなMarkdownリスト形式で生成する。
     """
-    all_records = [] # リスト of (sort_key, full_identifier, display_date, filepath)
+    all_records = [] 
 
     for filename in sorted(os.listdir(LOGS_DIR)):
-        if filename.endswith('.md') and filename != 'README.md' and filename != 'template.md.tpl': # template.md.tplを除外
+        if filename.endswith('.md') and filename not in ['README.md', 'template.md.tpl']: # template.md.tplを除外
             filepath = os.path.join(LOGS_DIR, filename)
             
             # ファイル名から YYYY-MM-DD-NN を抽出 (例: 2025-07-30-01)
             full_identifier = filename.replace('.md', '')
             
             # YYYY-MM-DD 部分のみを抽出 (例: 2025-07-30)
-            # YYYY-MM-DD-NN の形式の場合、NN 部分を切り捨て
             log_date_only_str = full_identifier.rsplit('-', 1)[0] if '-' in full_identifier and full_identifier.rsplit('-', 1)[1].isdigit() else full_identifier
 
             try:
@@ -107,11 +105,7 @@ def generate_record_list_html():
                 sort_key = (log_date_obj, int(num_part) if num_part else 0)
 
             except ValueError:
-                # 不正なファイル名はスキップするが、ここではより堅牢にするため、
-                # YYYY-MM-DD 形式にマッチしない場合は、ファイル名をそのまま使用してソートを試みる
-                # （ただし、月間サマリーには含めない）
-                # ここではエラーを起こさず、スキップする
-                continue 
+                continue # 不正なファイル名はスキップ
 
             all_records.append((sort_key, full_identifier, display_date, filepath))
 
@@ -120,7 +114,7 @@ def generate_record_list_html():
 
     # Markdownリスト形式で出力
     markdown_output_lines = []
-    for _, full_identifier_str, display_date, filepath in sorted_records: # ここでNUM_RECENT_LOGSのフィルタリングを削除
+    for _, full_identifier_str, display_date, filepath in sorted_records:
         markdown_output_lines.append(f'- [{display_date}]({filepath})')
     
     return "\n".join(markdown_output_lines)
@@ -134,7 +128,7 @@ def generate_monthly_summary():
     monthly_data = {} # キー: 'YYYY-MM', 値: {'distance': float, 'time_sec': int}
 
     for filename in sorted(os.listdir(LOGS_DIR)):
-        if filename.endswith('.md') and filename != 'README.md' and filename != 'template.md.tpl': # template.md.tplを除外
+        if filename.endswith('.md') and filename not in ['README.md', 'template.md.tpl']: # template.md.tplを除外
             filepath = os.path.join(LOGS_DIR, filename)
             
             # ファイル名から YYYY-MM-DD-NN を抽出 (例: 2025-07-30-01)
@@ -179,59 +173,41 @@ def generate_monthly_summary():
 def update_readme_sections(record_list_content, summary_content):
     """
     README.mdの記録一覧と月間サマリーセクションを新しい内容で更新する。
+    HTMLコメント形式のマーカーを使って内容を置換する。
     """
-    readme_content_lines = [] # 最終的にファイルに書き込む行のリスト
-    in_replacement_block = False # 置換ブロックの中にいるかどうかのフラグ
-    current_section_start_marker = None
+    try:
+        with open(README_FILE, 'r', encoding='utf-8') as f:
+            readme_full_content = f.read()
 
-    with open(README_FILE, 'r', encoding='utf-8') as f:
-        for line in f:
-            stripped_line = line.strip()
+        # 記録一覧セクションの置換
+        record_list_pattern = re.compile(
+            re.escape(RECORD_LIST_SECTION_START_MARKER) + r'.*' + re.escape(RECORD_LIST_SECTION_END_MARKER),
+            re.DOTALL # . が改行にもマッチするように
+        )
+        new_record_list_block = RECORD_LIST_SECTION_START_MARKER + '\n' + record_list_content + '\n' + RECORD_LIST_SECTION_END_MARKER
+        readme_full_content = record_list_pattern.sub(new_record_list_block, readme_full_content, 1) # 1回だけ置換
 
-            # 記録一覧セクションの開始マーカーを検出
-            if stripped_line == RECORD_LIST_SECTION_START:
-                readme_content_lines.append(line.rstrip('\n')) # 開始マーカーをそのまま追加
-                readme_content_lines.append(record_list_content) # 新しい記録一覧を挿入
-                in_replacement_block = True
-                current_section_start_marker = RECORD_LIST_SECTION_START
-                continue # 次の行へ
-            # 記録一覧セクションの終了マーカーを検出
-            elif stripped_line == RECORD_LIST_SECTION_END and in_replacement_block and current_section_start_marker == RECORD_LIST_SECTION_START:
-                readme_content_lines.append(line.rstrip('\n')) # 終了マーカーをそのまま追加
-                in_replacement_block = False
-                current_section_start_marker = None
-                continue # 次の行へ
+        # 月間サマリーセクションの置換
+        summary_pattern = re.compile(
+            re.escape(SUMMARY_SECTION_START_MARKER) + r'.*' + re.escape(SUMMARY_SECTION_END_MARKER),
+            re.DOTALL
+        )
+        new_summary_block = SUMMARY_SECTION_START_MARKER + '\n' + summary_content + '\n' + SUMMARY_SECTION_END_MARKER
+        readme_full_content = summary_pattern.sub(new_summary_block, readme_full_content, 1) # 1回だけ置換
 
-            # 月間サマリーセクションの開始マーカーを検出
-            if stripped_line == SUMMARY_SECTION_START:
-                readme_content_lines.append(line.rstrip('\n')) # 開始マーカーをそのまま追加
-                readme_content_lines.append(summary_content) # 新しいサマリーを挿入
-                in_replacement_block = True
-                current_section_start_marker = SUMMARY_SECTION_START
-                continue
-            # 月間サマリーセクションの終了マーカーを検出
-            elif stripped_line == SUMMARY_SECTION_END and in_replacement_block and current_section_start_marker == SUMMARY_SECTION_START:
-                readme_content_lines.append(line.rstrip('\n')) # 終了マーkerをそのまま追加
-                in_replacement_block = False
-                current_section_start_marker = None
-                continue
+        with open(README_FILE, 'w', encoding='utf-8', newline='\n') as f:
+            f.write(readme_full_content)
 
-            # 置換ブロック内でなければ、元の行をそのまま追加
-            if not in_replacement_block:
-                readme_content_lines.append(line.rstrip('\n')) # 元の行をそのまま追加
-
-    # ファイルに書き込み
-    # 各行の最後に改行を追加して、newline='\n' で改行コードを統一
-    with open(README_FILE, 'w', encoding='utf-8', newline='\n') as f:
-        for line_to_write in readme_content_lines:
-            f.write(line_to_write + '\n')
+    except Exception as e:
+        print(f"README.md の更新中にエラーが発生しました: {e}")
+        raise # エラーを再スローして、トレースバックを表示させる
 
 if __name__ == "__main__":
     print("📝 README.md の記録一覧と月間サマリーを更新中 (Pythonスクリプト)...")
     try:
-        record_list_html = generate_record_list_html()
+        record_list_md = generate_record_list_markdown() # 関数名を変更
         monthly_summary_content = generate_monthly_summary()
-        update_readme_sections(record_list_html, monthly_summary_content)
+        update_readme_sections(record_list_md, monthly_summary_content)
         print("✅ README.md の更新が完了しました。")
     except FileNotFoundError:
         print(f"エラー: {LOGS_DIR} ディレクトリまたは {README_FILE} が見つかりません。")
@@ -239,6 +215,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"エラーが発生しました: {e}")
         # 詳細なエラーメッセージを表示
-        import traceback
         traceback.print_exc()
         exit(1)
