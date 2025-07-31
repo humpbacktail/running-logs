@@ -16,8 +16,8 @@ RECORD_LIST_SECTION_END = ''
 SUMMARY_SECTION_START = ''
 SUMMARY_SECTION_END = ''
 
-# 表示するログの件数
-NUM_RECENT_LOGS = 10 # <-- ここを10件に設定
+# 直近N件の表示は今回は行わないため、この行は削除またはコメントアウト
+# NUM_RECENT_LOGS = 10 
 
 
 def parse_log_file(filepath):
@@ -77,18 +77,19 @@ def calculate_pace(total_seconds, total_km):
 
 def generate_record_list_html():
     """
-    logsディレクトリからデータを読み込み、最新N件のログをシンプルなMarkdownリスト形式で生成する。
+    logsディレクトリからデータを読み込み、全てのログをシンプルなMarkdownリスト形式で生成する。
     """
     all_records = [] # リスト of (sort_key, full_identifier, display_date, filepath)
 
     for filename in sorted(os.listdir(LOGS_DIR)):
-        if filename.endswith('.md') and filename != 'README.md':
+        if filename.endswith('.md') and filename != 'README.md' and filename != 'template.md.tpl': # template.md.tplを除外
             filepath = os.path.join(LOGS_DIR, filename)
             
             # ファイル名から YYYY-MM-DD-NN を抽出 (例: 2025-07-30-01)
             full_identifier = filename.replace('.md', '')
             
             # YYYY-MM-DD 部分のみを抽出 (例: 2025-07-30)
+            # YYYY-MM-DD-NN の形式の場合、NN 部分を切り捨て
             log_date_only_str = full_identifier.rsplit('-', 1)[0] if '-' in full_identifier and full_identifier.rsplit('-', 1)[1].isdigit() else full_identifier
 
             try:
@@ -106,20 +107,20 @@ def generate_record_list_html():
                 sort_key = (log_date_obj, int(num_part) if num_part else 0)
 
             except ValueError:
-                continue # 不正なファイル名はスキップ
+                # 不正なファイル名はスキップするが、ここではより堅牢にするため、
+                # YYYY-MM-DD 形式にマッチしない場合は、ファイル名をそのまま使用してソートを試みる
+                # （ただし、月間サマリーには含めない）
+                # ここではエラーを起こさず、スキップする
+                continue 
 
             all_records.append((sort_key, full_identifier, display_date, filepath))
 
     # 全ての記録を日付（降順）かつ連番（降順）でソート
     sorted_records = sorted(all_records, key=lambda x: x[0], reverse=True)
 
-    # 最新N件のみを抽出
-    recent_records = sorted_records[:NUM_RECENT_LOGS]
-
     # Markdownリスト形式で出力
     markdown_output_lines = []
-    for _, full_identifier_str, display_date, filepath in recent_records:
-        # filepath は logs/YYYY-MM-DD-NN.md 形式
+    for _, full_identifier_str, display_date, filepath in sorted_records: # ここでNUM_RECENT_LOGSのフィルタリングを削除
         markdown_output_lines.append(f'- [{display_date}]({filepath})')
     
     return "\n".join(markdown_output_lines)
@@ -133,7 +134,7 @@ def generate_monthly_summary():
     monthly_data = {} # キー: 'YYYY-MM', 値: {'distance': float, 'time_sec': int}
 
     for filename in sorted(os.listdir(LOGS_DIR)):
-        if filename.endswith('.md') and filename != 'README.md':
+        if filename.endswith('.md') and filename != 'README.md' and filename != 'template.md.tpl': # template.md.tplを除外
             filepath = os.path.join(LOGS_DIR, filename)
             
             # ファイル名から YYYY-MM-DD-NN を抽出 (例: 2025-07-30-01)
@@ -203,8 +204,6 @@ def update_readme_sections(record_list_content, summary_content):
 
             # 月間サマリーセクションの開始マーカーを検出
             if stripped_line == SUMMARY_SECTION_START:
-                # このセクションヘッダーが RECORD_LIST_SECTION_START と間違って解釈されないように、
-                # ここに到達する前に RECORD_LIST_SECTION_END が処理されていることを確認
                 readme_content_lines.append(line.rstrip('\n')) # 開始マーカーをそのまま追加
                 readme_content_lines.append(summary_content) # 新しいサマリーを挿入
                 in_replacement_block = True
