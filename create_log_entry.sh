@@ -64,19 +64,21 @@ fi
 
 echo "📝 Markdownファイルを生成中: ${LOG_FILE}"
 
+# LOG_IDENTIFIER と IMAGES をテンプレに埋め込む
 IMAGE_BLOCK=$(cat "${TEMP_IMG_BLOCK}")
+IDENTIFIER="${LOG_IDENTIFIER}"  # envsubst 用に export
 
-awk -v date_var="${BASE_DATE}" -v image_block="${IMAGE_BLOCK}" '
-{
-  line = $0
-  gsub(/\$\{DATE\}/, date_var, line)
-  gsub(/\$\{IMAGES\}/, image_block, line)
-  print line
-}' "${TEMPLATE_FILE}" > "${LOG_FILE}"
+# 一時テンプレートで IMAGES を先に埋め込み
+TEMP_TPL=$(mktemp)
+sed "s|\${IMAGES}|${IMAGE_BLOCK//$'
+'/\n}|" "${TEMPLATE_FILE}" > "$TEMP_TPL"
 
+# IDENTIFIER を埋め込んで Markdown に出力
+envsubst '${IDENTIFIER}' < "$TEMP_TPL" > "${LOG_FILE}"
+
+rm "$TEMP_TPL"
 rm "${TEMP_IMG_BLOCK}" || true
 
 echo "✅ Markdownログ生成完了: ${LOG_FILE}"
 echo "👉 logs/${LOG_IDENTIFIER}.md を開いて、距離・時間などの情報を手動で入力してください。"
-echo "🔧 手入力完了後、'bash update_and_push_logs.sh' を実行してください。"
 echo "🎉 ログエントリー作成完了！"
