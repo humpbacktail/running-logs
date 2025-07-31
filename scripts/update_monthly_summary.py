@@ -74,74 +74,70 @@ def calculate_pace(total_seconds, total_km):
     
     return f"{pace_minutes}'{pace_seconds:02d}/km"
 
-def generate_record_list_markdown(): # 名前をhtmlからmarkdownに変更
+def generate_record_list_markdown():
     """
-    logsディレクトリからデータを読み込み、全てのログをシンプルなMarkdownリスト形式で生成する。
+    logsディレクトリからデータを読み込み、連番あり・なし両方に対応したMarkdownリストを生成する。
     """
-    all_records = [] 
+    all_records = []
 
     for filename in sorted(os.listdir(LOGS_DIR)):
-        if filename.endswith('.md') and filename not in ['README.md', 'template.md.tpl']: # template.md.tplを除外
+        if filename.endswith('.md') and filename not in ['README.md', 'template.md.tpl']:
             filepath = os.path.join(LOGS_DIR, filename)
-            
-            # ファイル名から YYYY-MM-DD-NN を抽出 (例: 2025-07-30-01)
             full_identifier = filename.replace('.md', '')
-            
-            # YYYY-MM-DD 部分のみを抽出 (例: 2025-07-30)
-            log_date_only_str = full_identifier.rsplit('-', 1)[0] if '-' in full_identifier and full_identifier.rsplit('-', 1)[1].isdigit() else full_identifier
+
+            # YYYY-MM-DD or YYYY-MM-DD-NN
+            parts = full_identifier.split('-')
+            if len(parts) < 3:
+                continue  # 無効な形式（年/月/日がない）
 
             try:
-                # ソートのために YYYY-MM-DD をパース
-                log_date_obj = datetime.datetime.strptime(log_date_only_str, '%Y-%m-%d')
-                
-                # 表示用日付 (例: 2025年07月30日-01)
-                num_part = full_identifier.rsplit('-', 1)[1] if '-' in full_identifier and full_identifier.rsplit('-', 1)[1].isdigit() else None
-                if num_part:
-                    display_date = f"{log_date_obj.strftime('%Y年%m月%d日')}-{num_part}"
-                else: # 連番がない場合（YYYY-MM-DD.md 形式のファイル）
-                    display_date = log_date_obj.strftime('%Y年%m月%d日')
-
-                # ソートキー: 日付（降順）、連番（降順）
-                sort_key = (log_date_obj, int(num_part) if num_part else 0)
-
+                base_date_str = "-".join(parts[:3])
+                log_date_obj = datetime.datetime.strptime(base_date_str, '%Y-%m-%d')
             except ValueError:
-                continue # 不正なファイル名はスキップ
+                continue
+
+            # 表示日付（例: 2025年07月30日 または 2025年07月30日-02）
+            display_date = log_date_obj.strftime('%Y年%m月%d日')
+            if len(parts) == 4 and parts[3].isdigit():
+                display_date += f"-{parts[3]}"
+                sort_key = (log_date_obj, int(parts[3]))
+            else:
+                sort_key = (log_date_obj, 0)  # 連番なしは "0" として扱う
 
             all_records.append((sort_key, full_identifier, display_date, filepath))
 
-    # 全ての記録を日付（降順）かつ連番（降順）でソート
+    # 日付＋連番の降順でソート
     sorted_records = sorted(all_records, key=lambda x: x[0], reverse=True)
 
-    # Markdownリスト形式で出力
     markdown_output_lines = []
-    for _, full_identifier_str, display_date, filepath in sorted_records:
+    for _, _, display_date, filepath in sorted_records:
         markdown_output_lines.append(f'- [{display_date}]({filepath})')
-    
+
     return "\n".join(markdown_output_lines)
 
 
 def generate_monthly_summary():
     """
     logsディレクトリからデータを読み込み、月間集計を生成する。
-    ファイル名が YYYY-MM-DD-NN.md の形式に対応。
+    連番なし・連番あり両方に対応。
     """
-    monthly_data = {} # キー: 'YYYY-MM', 値: {'distance': float, 'time_sec': int}
+    monthly_data = {}
 
     for filename in sorted(os.listdir(LOGS_DIR)):
-        if filename.endswith('.md') and filename not in ['README.md', 'template.md.tpl']: # template.md.tplを除外
+        if filename.endswith('.md') and filename not in ['README.md', 'template.md.tpl']:
             filepath = os.path.join(LOGS_DIR, filename)
-            
-            # ファイル名から YYYY-MM-DD-NN を抽出 (例: 2025-07-30-01)
             full_identifier = filename.replace('.md', '')
-            
-            # 月キー取得のために YYYY-MM-DD 部分のみを抽出 (例: 2025-07-30)
-            log_date_only_str = full_identifier.rsplit('-', 1)[0] if '-' in full_identifier and full_identifier.rsplit('-', 1)[1].isdigit() else full_identifier
+
+            parts = full_identifier.split('-')
+            if len(parts) < 3:
+                continue  # 年月日が足りない
 
             try:
-                log_date = datetime.datetime.strptime(log_date_only_str, '%Y-%m-%d')
-                month_key = log_date.strftime('%Y-%m') # 'YYYY-MM' 形式
+                base_date_str = "-".join(parts[:3])  # YYYY-MM-DD
+                log_date = datetime.datetime.strptime(base_date_str, '%Y-%m-%d')
+                month_key = log_date.strftime('%Y-%m')  # 'YYYY-MM'
             except ValueError:
-                continue # 不正なファイル名はスキップ
+                continue
 
             distance, time_sec = parse_log_file(filepath)
 
@@ -151,24 +147,22 @@ def generate_monthly_summary():
             monthly_data[month_key]['distance'] += distance
             monthly_data[month_key]['time_sec'] += time_sec
 
-    # 集計結果を整形
     summary_lines = []
-    # 月順にソートして出力
     for month_key in sorted(monthly_data.keys()):
         data = monthly_data[month_key]
         total_dist = data['distance']
         total_time_sec = data['time_sec']
 
         display_month = datetime.datetime.strptime(month_key, '%Y-%m').strftime('%Y年%m月')
-        
         formatted_time = format_time_from_seconds(total_time_sec)
         avg_pace = calculate_pace(total_time_sec, total_dist)
 
         summary_lines.append(
             f"- **{display_month}**: 距離 **{total_dist:.1f} km**, 時間 **{formatted_time}**, 平均ペース **{avg_pace}**"
         )
-    
+
     return "\n".join(summary_lines)
+
 
 def update_readme_sections(record_list_content, summary_content):
     """
