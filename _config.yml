@@ -1,0 +1,27 @@
+title: MASA Running Logs
+description: ラン記録とメモ
+lang: ja
+theme: minima  # まずは標準テーマ。後で変えられる
+
+# 便利系
+plugins:
+  - jekyll-seo-tag
+  - jekyll-feed
+  - jekyll-titles-from-headings
+titles_from_headings:
+  enabled: true
+  strip_title: true
+
+# URLの見え方
+permalink: /:categories/:year/:month/:day/:title/
+
+# Markdown
+markdown: kramdown
+kramdown:
+  input: GFM
+
+# 既存mdを「ページ化」しやすくする設定（任意）
+collections:
+  logs:
+    output: true
+    permalink: /logs/:name/
