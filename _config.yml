@@ -20,8 +20,16 @@ markdown: kramdown
 kramdown:
   input: GFM
 
-# 既存mdを「ページ化」しやすくする設定（任意）
+# ログ用のコレクション設定
 collections:
   logs:
     output: true
     permalink: /logs/:name/
+
+# デフォルト設定（logs配下は自動でレイアウト付与）
+defaults:
+  - scope:
+      path: ""
+      type: "logs"
+    values:
+      layout: post
