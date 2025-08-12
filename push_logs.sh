@@ -8,4 +8,5 @@ git add .
 git commit -m "ランログ＆README更新"
 git push
 
+
 echo "✅ GitHubへのプッシュ完了！"

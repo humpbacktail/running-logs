@@ -14,11 +14,24 @@ def infer_date_from_name(name: str) -> str:
         return f"{y}-{mo}-{d}"
     return datetime.date.today().isoformat()
 
+RUN_ID_RE = re.compile(r"^(20\d{2})[-_](\d{2})[-_](\d{2})(?:[-_](\d+))?")
+
 def infer_title(content: str, fallback: str) -> str:
+    # md本文の H1 見出しがあれば優先
     m = H1_TITLE.search(content)
     if m:
         return m.group(1).strip()
-    return re.sub(r"\.md$", "", fallback, flags=re.IGNORECASE)
+    # ファイル名から日付＋連番を抽出
+    base_name = re.sub(r"\.md$", "", fallback, flags=re.IGNORECASE)
+    m = RUN_ID_RE.match(base_name)
+    if m:
+        y, mo, d, seq = m.groups()
+        if seq:
+            return f"🏃‍♂️ {y}-{mo}-{d}-{seq} のランログ"
+        else:
+            return f"🏃‍♂️ {y}-{mo}-{d} のランログ"
+    # マッチしなかった場合はファイル名そのまま
+    return f"🏃‍♂️ {base_name} のランログ"
 
 def has_front_matter(text: str) -> bool:
     return text.lstrip().startswith("---")
@@ -84,26 +97,30 @@ def migrate(sources: List[str], target: str, move: bool, dry_run: bool, excludes
             # ファイル名：既に日付がなければ付与
             out_name = p.name
             if not DATE_IN_NAME.search(out_name):
-                # スラッグ簡易化（空白→ハイフン）
                 slug_base = re.sub(r"\s+", "-", re.sub(r"\.md$", "", p.name, flags=re.I))
                 out_name = f"{date_iso}-{slug_base}.md"
-            out_path = next_available(tdir / out_name)
+            out_path = tdir / out_name
 
             if dry_run:
                 print(f"DRY-RUN: {'MOVE' if move else 'COPY'} {p.relative_to(root)} -> {out_path.relative_to(root)}  (title='{title}', date={date_iso})")
             else:
-                if move:
-                    # move: まず書き出し→元を削除（安全のためcopy→deleteの二段構え）
-                    safe_write(out_path, new_content)
+                if out_path.exists():
+                    # 既存と同一なら何もしない、違えば上書き（-1を作らない）
                     try:
-                        p.unlink()
-                    except Exception as e:
-                        print(f"⚠️ Could not remove source {p}: {e}")
+                        existing = out_path.read_text(encoding="utf-8")
+                    except Exception:
+                        existing = None
+                    if existing == new_content:
+                        skipped += 1
+                    else:
+                        safe_write(out_path, new_content)
+                        migrated += 1
                 else:
-                    # copy: 新規を書き出し（元は残す）
                     safe_write(out_path, new_content)
+                    migrated += 1
 
-                migrated += 1
+            
+            
 
     print(f"✅ Migrated: {migrated}  |  Skipped: {skipped}  |  Output dir: {target}")
     if dry_run:
