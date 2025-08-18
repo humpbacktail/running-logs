@@ -73,8 +73,14 @@ TEMP_TPL=$(mktemp)
 sed "s|\${IMAGES}|${IMAGE_BLOCK//$'
 '/\n}|" "${TEMPLATE_FILE}" > "$TEMP_TPL"
 
-# IDENTIFIER を埋め込んで Markdown に出力
-envsubst '${IDENTIFIER}' < "$TEMP_TPL" > "${LOG_FILE}"
+# 置換に使う環境変数（envsubst は環境変数しか置換しない）
+export DATE="${BASE_DATE}"
+export SEQ="${FORMATTED_NUMBER}"
+export IDENTIFIER="${LOG_IDENTIFIER}"
+
+# テンプレの ${DATE} / ${SEQ} / ${IDENTIFIER} を置換
+envsubst '${DATE} ${SEQ} ${IDENTIFIER}' < "$TEMP_TPL" > "${LOG_FILE}"
+
 
 rm "$TEMP_TPL"
 rm "${TEMP_IMG_BLOCK}" || true
