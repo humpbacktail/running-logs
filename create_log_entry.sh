@@ -55,7 +55,7 @@ TEMP_IMG_BLOCK=$(mktemp)
 if compgen -G "${IMAGE_DIR}/*" > /dev/null; then
   for img in "${IMAGE_DIR}"/*; do
     filename=$(basename "$img")
-    echo '<img src="/images/'"${LOG_IDENTIFIER}"'/'"${filename}"'" width="400" />' >> "${TEMP_IMG_BLOCK}"
+    echo "<img src=\"{{ '/images/${IDENTIFIER}/${filename}' | relative_url }}\" width=\"400\" />" >> "${TEMP_IMG_BLOCK}"
   done
 else
   echo "（写真なし）" >> "${TEMP_IMG_BLOCK}"
