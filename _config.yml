@@ -2,7 +2,14 @@ title: MASA Running Logs
 theme: minima
 url: "https://humpbacktail.github.io"
 baseurl: "/running-logs"   # ★必須（プロジェクトページの場合）
+
 collections:
   logs:
     output: true
     permalink: /logs/:name/
+
+# ★ ここを追加
+exclude:
+  - logs/template.md.tpl     # テンプレ1個だけ除外（推奨）
+  # 予防で .tpl 全除外
+  
