@@ -1,9 +1,8 @@
 ---
 layout: home
-title: ランログ
+title: MASA Running Logs
 ---
 
 ここはMASAのランログまとめサイトです🏃‍♂️  
-最新の記録や月間サマリーを公開していきます。
-
 - [ログ一覧]({{ '/logs/' | relative_url }})
+- 週次・月次サマリーは [README]({{ '/' | relative_url }}) を参照
