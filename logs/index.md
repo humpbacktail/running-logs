@@ -1,20 +1,9 @@
 ---
-layout: page
-title: ログ一覧
-permalink: /logs/
+layout: home
+title: MASA Running Logs
 ---
 
-<style>
-.post-list { list-style:none; padding:0; }
-.post-list li { margin: 0 0 1rem; }
-</style>
+ランログまとめサイトです🏃‍♂️  
+最新の記録や月間・週次サマリーを公開しています。
 
-{% assign items = site.logs | sort: "date" | reverse %}
-<ul class="post-list">
-  {% for item in items %}
-    <li>
-      <span class="post-meta">{{ item.date | date: "%Y-%m-%d" }}</span>
-      <h3><a href="{{ item.url | relative_url }}">{{ item.title }}</a></h3>
-    </li>
-  {% endfor %}
-</ul>
+- [ログ一覧]({{ '/logs/' | relative_url }})

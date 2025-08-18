@@ -1,5 +1,12 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+
+# 一時ファイルを作る
+TEMP_TPL="$(mktemp)"
+TEMP_IMG_BLOCK="$(mktemp)"
+
+# 失敗・正常終了どちらでも掃除（未定義でもOKにする）
+trap 'rm -f -- "${TEMP_TPL:-}" "${TEMP_IMG_BLOCK:-}"' EXIT
 
 echo "🔧 ログエントリー作成スクリプト開始（$(date)）"
 
@@ -29,6 +36,9 @@ IMAGE_DIR="images/${LOG_IDENTIFIER}"
 LOG_FILE="logs/${LOG_IDENTIFIER}.md"
 TEMPLATE_FILE="logs/template.md.tpl"
 
+# ★ 追加（＝前倒し）：画像HTMLを作る前にIDENTIFIERを設定しておく
+export IDENTIFIER="${LOG_IDENTIFIER}"
+
 if [ ! -f "$TEMPLATE_FILE" ]; then
   echo "❌ テンプレートファイルが見つかりません: ${TEMPLATE_FILE}"
   exit 1
@@ -53,34 +63,35 @@ fi
 
 TEMP_IMG_BLOCK=$(mktemp)
 if compgen -G "${IMAGE_DIR}/*" > /dev/null; then
-  for img in "${IMAGE_DIR}"/*; do
-    filename=$(basename "$img")
-    echo "<img src=\"{{ '/images/${IDENTIFIER}/${filename}' | relative_url }}\" width=\"400\" />" >> "${TEMP_IMG_BLOCK}"
+  shopt -s nullglob nocaseglob
+  for img in "${IMAGE_DIR}"/*.{jpg,jpeg,png,gif,webp}; do
+    filename="$(basename "$img")"
+    cat >> "${TEMP_IMG_BLOCK}" <<EOF
+<img src="{{ '/images/${LOG_IDENTIFIER}/${filename}' | relative_url }}" width="400" />
+EOF
   done
+  shopt -u nullglob nocaseglob
 else
   echo "（写真なし）" >> "${TEMP_IMG_BLOCK}"
-  echo "ℹ️ ${IMAGE_DIR} に画像が見つかりませんでした。"
 fi
 
 echo "📝 Markdownファイルを生成中: ${LOG_FILE}"
 
-# LOG_IDENTIFIER と IMAGES をテンプレに埋め込む
+# IMAGES ブロックをテンプレに流し込み
 IMAGE_BLOCK=$(cat "${TEMP_IMG_BLOCK}")
-IDENTIFIER="${LOG_IDENTIFIER}"  # envsubst 用に export
-
-# 一時テンプレートで IMAGES を先に埋め込み
 TEMP_TPL=$(mktemp)
-sed "s|\${IMAGES}|${IMAGE_BLOCK//$'
-'/\n}|" "${TEMPLATE_FILE}" > "$TEMP_TPL"
+sed "/\${IMAGES}/ {
+  r ${TEMP_IMG_BLOCK}
+  d
+}" "${TEMPLATE_FILE}" > "$TEMP_TPL"
 
-# 置換に使う環境変数（envsubst は環境変数しか置換しない）
+# envsubst は「環境変数」だけ置換する ⇒ export を忘れずに
 export DATE="${BASE_DATE}"
 export SEQ="${FORMATTED_NUMBER}"
 export IDENTIFIER="${LOG_IDENTIFIER}"
 
-# テンプレの ${DATE} / ${SEQ} / ${IDENTIFIER} を置換
+# テンプレ内の ${DATE}/${SEQ}/${IDENTIFIER} を最終置換
 envsubst '${DATE} ${SEQ} ${IDENTIFIER}' < "$TEMP_TPL" > "${LOG_FILE}"
-
 
 rm "$TEMP_TPL"
 rm "${TEMP_IMG_BLOCK}" || true
