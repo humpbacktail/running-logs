@@ -5,6 +5,6 @@ baseurl: "/running-logs"        # ← リポジトリ名と一致
 collections:
   logs:
     output: true
-    permalink: /logs/:name/
+    permalink: /logs/:name.html
 exclude:
   - logs/template.md.tpl        # ← テンプレは除外（そのままでOK）

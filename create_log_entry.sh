@@ -67,7 +67,7 @@ if compgen -G "${IMAGE_DIR}/*" > /dev/null; then
   for img in "${IMAGE_DIR}"/*.{jpg,jpeg,png,gif,webp}; do
     filename="$(basename "$img")"
     cat >> "${TEMP_IMG_BLOCK}" <<EOF
-<img src="{{ '/images/${LOG_IDENTIFIER}/${filename}' | relative_url }}" width="400" />
+<img src="../images/${LOG_IDENTIFIER}/${filename}" width="400" />
 EOF
   done
   shopt -u nullglob nocaseglob
