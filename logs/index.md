@@ -11,7 +11,7 @@ permalink: /logs/
   .log-title { font-size:1.05rem; text-decoration:none; }
 </style>
 
-{%- assign items = site.collections.logs.docs | sort: "date" | reverse -%}
+{%- assign items = site.logs | sort: "date" | reverse -%}
 <ul class="log-list">
 {%- for item in items -%}
   <li>
