@@ -1,31 +1,39 @@
 name: Deploy to GitHub Pages
-
 on:
   push:
-    branches:
-      - main  # ← デプロイしたいブランチ名に合わせて（例：main や master）
+    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
-  deploy:
-    environment:  # ←★このブロックが必要！
-      name: github-pages
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      # Jekyll公式ビルドアクション（GitHub Pages準拠）
+      - uses: actions/jekyll-build-pages@v1
         with:
-          path: ./  # ← GitHub Pages に公開したいフォルダ。README だけならそのままでOK
+          source: ./
+          destination: ./_site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
 
-      - name: Deploy to GitHub Pages
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
         uses: actions/deploy-pages@v4
