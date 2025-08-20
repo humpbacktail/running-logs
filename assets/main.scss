@@ -25,3 +25,8 @@
     z-index: 1000;
   }
 }
+
+.card-grid { gap: 16px; }          /* 既にあれば調整だけでOK */
+@media (min-width: 1024px) {
+  .card-grid { gap: 20px; }
+}
