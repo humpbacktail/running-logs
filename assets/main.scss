@@ -5,3 +5,23 @@
 
 .wrapper { max-width: 960px; padding: 0 16px; margin: 0 auto; }
 .page-title, .post-title { font-weight: 700; }
+
+/* PCでもハンバーガー運用に統一 */
+@media (min-width: 600px) {
+  .site-nav .menu-icon,
+  .site-nav label[for="nav-trigger"] { display: inline-block; }
+  .site-nav .trigger { display: none; }
+
+  /* クリック時に開くドロップダウン */
+  #nav-trigger:checked ~ .trigger {
+    display: block;
+    position: absolute;
+    right: 0; top: 100%;
+    background: #fff;
+    padding: .75rem 1rem;
+    border: 1px solid #eee; border-radius: 8px;
+    box-shadow: 0 10px 20px rgba(0,0,0,.08);
+    max-height: 70vh; overflow: auto;
+    z-index: 1000;
+  }
+}
