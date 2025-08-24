@@ -6,7 +6,7 @@ baseurl: "/running-logs"
 collections:
   logs:
     output: true
-    permalink: /logs/:name/
+    permalink: /logs/:name.html
 
 # ビルド対象外（テンプレは公開しない）
 exclude:
