@@ -1,48 +1,36 @@
 ---
 # Only the main Sass file needs front matter
 ---
-
-/* 1) minima のスタイルを必ず読み込む */
 @import "minima";
 
-/* 2) ここからサイトのカスタム -------------------------- */
-
-/* ハンバーガー内の「直近10件＋もっと見る」 */
-.menu-logs {
-  margin: .25rem 0 .5rem;
-  padding-left: 1rem;
-  max-height: 50vh;
-  overflow-y: auto;
-}
-.menu-logs li {
-  list-style: none;
-  margin: .1rem 0;
-  line-height: 1.3;
-}
-.menu-logs .page-link { display: inline-block; text-decoration: none; }
-.menu-logs li:last-child .page-link { font-weight: 700; }
-
-/* 折りたたみ見出し */
-details > summary { cursor: pointer; font-weight: 600; margin-top: .5rem; }
-
-/* minima のナビ余白微調整 */
-.site-nav .trigger { padding: .5rem 0; }
-
-
-/* 既に @import "minima"; が最上部にある前提 */
-.site-nav .trigger-label { display: inline-block; }    /* デスクトップでも表示 */
+/* ハンバーガー：右ドロワー + 背景 */
+.site-nav .trigger-label { display: inline-block !important; } /* デスクトップでもボタン表示 */
 .nav-trigger { display: none; }
-.site-nav .trigger { display: none; }
-.nav-trigger:checked ~ .trigger { display: block; }    /* クリックで展開 */
 
-.menu-logs { margin:.25rem 0 .5rem; padding-left:1rem; max-height:50vh; overflow-y:auto; }
-.menu-logs li { list-style:none; margin:.1rem 0; line-height:1.3; }
-details > summary { cursor:pointer; font-weight:600; margin-top:.5rem; }
+.site-nav .trigger{
+  position: fixed; top:0; right:0;
+  width:320px; max-width:85vw; height:100vh;
+  background:#fff; padding:1rem 1.25rem; overflow-y:auto;
+  box-shadow:-6px 0 24px rgba(0,0,0,.12);
+  transform: translateX(100%); transition: transform .25s ease;
+  z-index:1001;
+}
+.nav-trigger:checked ~ .trigger{ transform: translateX(0); }
 
+.site-nav .nav-backdrop{
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.35); z-index:1000;
+}
+.nav-trigger:checked ~ .nav-backdrop{ display:block; }
 
-/* --- force hamburger visible on desktop as well --- */
-.site-nav label[for="nav-trigger"],
-.site-nav .menu-icon { display: inline-block !important; }  /* デスクトップでも表示 */
-.nav-trigger { display: none; }                              /* チェックボックス自体は隠す */
-.site-nav .trigger { display: none; }                        /* 初期は隠す */
-.nav-trigger:checked ~ .trigger { display: block; }          /* クリックで展開 */
+.site-nav .close-btn{
+  position:absolute; top:.5rem; right:.75rem; font-size:1.5rem;
+  line-height:1; cursor:pointer; color:#333;
+}
+
+/* リストの見た目 */
+.menu-heading{ font-size:1rem; margin:.25rem 0 .5rem; font-weight:700; }
+.menu-logs{ margin:0; padding-left:1rem; max-height:60vh; overflow-y:auto; }
+.menu-logs li{ list-style:none; margin:.1rem 0; line-height:1.3; }
+.menu-logs .page-link{ display:inline-block; text-decoration:none; }
+.menu-logs .more-link{ font-weight:700; margin-top:.25rem; }
