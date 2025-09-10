@@ -1,32 +1,37 @@
 ---
+# Only the main Sass file needs front matter (the dashes are enough)
 ---
 
-@import "minima";  /* テーマのCSSを読み込み */
+@import "minima";
 
-.wrapper { max-width: 960px; padding: 0 16px; margin: 0 auto; }
-.page-title, .post-title { font-weight: 700; }
+/* ==== ここからカスタム ==== */
 
-/* PCでもハンバーガー運用に統一 */
-@media (min-width: 600px) {
-  .site-nav .menu-icon,
-  .site-nav label[for="nav-trigger"] { display: inline-block; }
-  .site-nav .trigger { display: none; }
-
-  /* クリック時に開くドロップダウン */
-  #nav-trigger:checked ~ .trigger {
-    display: block;
-    position: absolute;
-    right: 0; top: 100%;
-    background: #fff;
-    padding: .75rem 1rem;
-    border: 1px solid #eee; border-radius: 8px;
-    box-shadow: 0 10px 20px rgba(0,0,0,.08);
-    max-height: 70vh; overflow: auto;
-    z-index: 1000;
-  }
+/* ハンバーガー内の「直近10件＋もっと見る」用の軽量スタイル */
+.menu-logs { 
+  margin: .25rem 0 .5rem; 
+  padding-left: 1rem; 
+  max-height: 50vh;           /* 長すぎるときはスクロール */
+  overflow-y: auto;
+}
+.menu-logs li { 
+  list-style: none; 
+  margin: .1rem 0; 
+  line-height: 1.3;
+}
+.menu-logs .page-link { 
+  display: inline-block; 
+  text-decoration: none; 
+}
+.menu-logs li:last-child .page-link { 
+  font-weight: 700; 
 }
 
-.card-grid { gap: 16px; }          /* 既にあれば調整だけでOK */
-@media (min-width: 1024px) {
-  .card-grid { gap: 20px; }
+/* 折りたたみヘッダの見た目を少しだけ強調 */
+details > summary { 
+  cursor: pointer; 
+  font-weight: 600; 
+  margin-top: .5rem; 
 }
+
+/* スマホ時のナビ枠の余白微調整（minima準拠） */
+.site-nav .trigger { padding: .5rem 0; }
