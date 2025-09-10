@@ -4,39 +4,44 @@
 
     <nav class="site-nav">
       <!-- ★ 最小インラインCSS：必ず効かせるため -->
-      <style>
-        /* PCでもハンバーガーを常時表示／スマホの灰色枠を消す */
-        .site-nav label[for="nav-trigger"]{display:inline-flex!important;align-items:center;padding:.35rem .45rem;background:transparent!important;border:0!important;box-shadow:none!important;cursor:pointer}
-        .site-nav .menu-icon{border:0!important;background:transparent!important}
+<style>
+  /* ヘッダーをflexにして右端にナビを固定 */
+  .site-header .wrapper{display:flex;align-items:center}
+  .site-header .site-title{margin:0}
+  .site-nav{margin-left:auto;float:none !important;position:relative;z-index:1002}
 
-        /* 入力は隠す／初期は非表示（ドロワー） */
-        .nav-trigger{display:none}
-        .site-nav .trigger{display:none}
+  /* PCでもハンバーガーを常時表示。スマホの灰色枠も消す */
+  .site-nav label[for="nav-trigger"]{
+    display:inline-flex !important;align-items:center;
+    padding:.35rem .45rem;cursor:pointer;
+    background:transparent !important;border:0 !important;box-shadow:none !important;
+  }
+  /* ←ここが肝！minimaがPC幅で非表示にする .menu-icon を強制表示 */
+  .site-nav .menu-icon{display:inline-block !important;border:0 !important;background:transparent !important}
+  .site-nav .menu-icon svg{display:block;width:18px;height:15px}
 
-        /* 右ドロワー（スライド）＋背景 */
-        .site-nav .trigger{
-          position:fixed;top:0;right:0;width:320px;max-width:85vw;height:100vh;
-          background:#fff;padding:1rem 1.25rem;overflow-y:auto;
-          box-shadow:-6px 0 24px rgba(0,0,0,.12);
-          transform:translateX(100%);transition:transform .25s ease;z-index:1001
-        }
-        #nav-trigger:checked ~ .trigger{display:block;transform:translateX(0)}
-        .site-nav .nav-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1000}
-        #nav-trigger:checked ~ .nav-backdrop{display:block}
+  /* 入力は隠す／初期は非表示（ドロワー） */
+  .nav-trigger{display:none}
+  .site-nav .trigger{display:none}
 
-        /* 見出し＆リスト体裁 */
-        .menu-heading{font-size:1rem;margin:.25rem 0 .5rem;font-weight:700}
-        .menu-logs{margin:0;padding-left:1rem;max-height:60vh;overflow-y:auto}
-        .menu-logs li{list-style:none;margin:.1rem 0;line-height:1.3}
-        .menu-logs .page-link{display:inline-block;text-decoration:none}
-        .menu-logs .more-link{font-weight:700;margin-top:.25rem}
-        
-        /* PCでもナビを右端に固定して、常にアイコンが見えるようにする */
-        .site-header .wrapper{display:flex;align-items:center}
-        .site-header .site-title{margin:0}
-        .site-nav{margin-left:auto;float:none !important;position:relative;z-index:1002}
-        .site-nav label[for="nav-trigger"]{display:inline-flex !important}       
-      </style>
+  /* 右ドロワー（スライド）＋背景 */
+  .site-nav .trigger{
+    position:fixed;top:0;right:0;width:320px;max-width:85vw;height:100vh;
+    background:#fff;padding:1rem 1.25rem;overflow-y:auto;
+    box-shadow:-6px 0 24px rgba(0,0,0,.12);
+    transform:translateX(100%);transition:transform .25s ease;z-index:1001
+  }
+  #nav-trigger:checked ~ .trigger{display:block;transform:translateX(0)}
+  .site-nav .nav-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1000}
+  #nav-trigger:checked ~ .nav-backdrop{display:block}
+
+  /* ドロワー内の見た目 */
+  .menu-heading{font-size:1rem;margin:.25rem 0 .5rem;font-weight:700}
+  .menu-logs{margin:0;padding-left:1rem;max-height:60vh;overflow-y:auto}
+  .menu-logs li{list-style:none;margin:.1rem 0;line-height:1.3}
+  .menu-logs .page-link{display:inline-block;text-decoration:none}
+  .menu-logs .more-link{font-weight:700;margin-top:.25rem}
+</style>
 
       <!-- 開閉トグル -->
       <input type="checkbox" id="nav-trigger" class="nav-trigger" />
