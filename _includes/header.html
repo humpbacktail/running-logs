@@ -30,6 +30,12 @@
         .menu-logs li{list-style:none;margin:.1rem 0;line-height:1.3}
         .menu-logs .page-link{display:inline-block;text-decoration:none}
         .menu-logs .more-link{font-weight:700;margin-top:.25rem}
+        
+        /* PCでもナビを右端に固定して、常にアイコンが見えるようにする */
+        .site-header .wrapper{display:flex;align-items:center}
+        .site-header .site-title{margin:0}
+        .site-nav{margin-left:auto;float:none !important;position:relative;z-index:1002}
+        .site-nav label[for="nav-trigger"]{display:inline-flex !important}       
       </style>
 
       <!-- 開閉トグル -->
