@@ -3,3 +3,5 @@
 
 # アップロード作業用フォルダ（Git管理しない）
 upload/
+Gemfile
+Gemfile.lock
