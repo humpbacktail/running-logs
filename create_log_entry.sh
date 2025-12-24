@@ -77,25 +77,48 @@ fi
 
 echo "📝 Markdownファイルを生成中: ${LOG_FILE}"
 
-# IMAGES ブロックをテンプレに流し込み
-IMAGE_BLOCK=$(cat "${TEMP_IMG_BLOCK}")
-TEMP_TPL=$(mktemp)
-sed "/\${IMAGES}/ {
-  r ${TEMP_IMG_BLOCK}
-  d
-}" "${TEMPLATE_FILE}" > "$TEMP_TPL"
+# === ▼ ここから書き換え・追加 ▼ ===
 
-# envsubst は「環境変数」だけ置換する ⇒ export を忘れずに
-export DATE="${BASE_DATE}"
-export SEQ="${FORMATTED_NUMBER}"
-export IDENTIFIER="${LOG_IDENTIFIER}"
+# AI解析スクリプトを実行
+# 引数: 画像ディレクトリ, 出力ファイルパス, 日付, 連番
+python3 scripts/analyze_run.py "${IMAGE_DIR}" "${LOG_FILE}" "${BASE_DATE}" "${FORMATTED_NUMBER}"
 
-# テンプレ内の ${DATE}/${SEQ}/${IDENTIFIER} を最終置換
-envsubst '${DATE} ${SEQ} ${IDENTIFIER}' < "$TEMP_TPL" > "${LOG_FILE}"
+# もしPythonが失敗したりAPIキーがなくてファイルが作られなかった場合のための予備処理（既存のテンプレート処理）
+if [ ! -f "${LOG_FILE}" ]; then
+  echo "⚠️ AI解析がスキップされたため、従来のテンプレートから空のファイルを生成します。"
+  
+  # 画像ブロック用の一時作成（既存ロジック）
+  TEMP_IMG_BLOCK=$(mktemp)
+  if compgen -G "${IMAGE_DIR}/*" > /dev/null; then
+    shopt -s nullglob nocaseglob
+    for img in "${IMAGE_DIR}"/*.{jpg,jpeg,png,gif,webp}; do
+      filename="$(basename "$img")"
+      cat >> "${TEMP_IMG_BLOCK}" <<EOF
+<img src="../images/${LOG_IDENTIFIER}/${filename}" width="400" loading="lazy" decoding="async" />
+EOF
+    done
+    shopt -u nullglob nocaseglob
+  else
+    echo "（写真なし）" >> "${TEMP_IMG_BLOCK}"
+  fi
 
-rm "$TEMP_TPL"
-rm "${TEMP_IMG_BLOCK}" || true
+  # テンプレート流し込み（既存ロジック）
+  TEMP_TPL=$(mktemp)
+  sed "/\${IMAGES}/ {
+    r ${TEMP_IMG_BLOCK}
+    d
+  }" "${TEMPLATE_FILE}" > "$TEMP_TPL"
+
+  export DATE="${BASE_DATE}"
+  export SEQ="${FORMATTED_NUMBER}"
+  export IDENTIFIER="${LOG_IDENTIFIER}"
+  envsubst '${DATE} ${SEQ} ${IDENTIFIER}' < "$TEMP_TPL" > "${LOG_FILE}"
+
+  rm "$TEMP_TPL" "${TEMP_IMG_BLOCK}"
+fi
+
+# === ▲ ここまで ▲ ===
 
 echo "✅ Markdownログ生成完了: ${LOG_FILE}"
-echo "👉 logs/${LOG_IDENTIFIER}.md を開いて、距離・時間などの情報を手動で入力してください。"
-echo "🎉 ログエントリー作成完了！"
+# （...以下、終了メッセージ...）
+
