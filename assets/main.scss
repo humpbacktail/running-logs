@@ -42,3 +42,71 @@
 
 /* (任意) 開いてる間の背景スクロール抑止（対応ブラウザのみ） */
 // body:has(#nav-trigger:checked){overflow:hidden}
+
+/* ===== ハンバーガーメニュー調整 ===== */
+
+/* チェックボックス自体は非表示 */
+.site-nav .nav-trigger {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ハンバーガーアイコン（クリック範囲） */
+.site-nav .trigger-label {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1001;
+}
+
+/* ドロワーメニュー本体 */
+.site-nav .trigger {
+  position: fixed;
+  top: 0;
+  right: -320px;            /* 最初は画面外に隠す */
+  width: 320px;
+  height: 100vh;
+  background: #fff;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  padding: 1.5rem;
+  overflow-y: auto;
+  transition: right 0.25s ease;
+  z-index: 1002;
+}
+
+/* 閉じるボタン */
+.site-nav .close-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 1rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* 背景のオーバーレイ（クリックで閉じる用） */
+.site-nav .nav-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  pointer-events: none;     /* デフォルトではクリック無効 */
+  transition: opacity 0.25s ease;
+  z-index: 1000;
+}
+
+/* チェックが付いたとき（メニューを開く） */
+.site-nav .nav-trigger:checked ~ .trigger {
+  right: 0;                 /* 画面内にスライドイン */
+}
+
+.site-nav .nav-trigger:checked ~ .nav-backdrop {
+  opacity: 1;
+  pointer-events: auto;     /* このときだけクリックを拾う */
+}
