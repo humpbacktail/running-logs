@@ -23,7 +23,7 @@
 
 <!-- WEEKLY_SUMMARY_START -->
 <details>
-<summary>📆 2026-W06（02/02–02/08） — 7.2 km / 1回 / 平均 5'32"/km</summary>
+<summary>📆 2026-W06（02/02–02/08） — 7.2 km / 2回 / 平均 5'32"/km</summary>
 
 - 最長: 7.2 km — [2026-02-02-01](logs/2026-02-02-01.md)
 </details>
@@ -245,6 +245,7 @@
 <summary>📂 2026年2月</summary>
 
 <!-- RECORD_LIST_2026_02_START -->
+- [2026-02-04-01](logs/2026-02-04-01.md)
 - [2026-02-02-01](logs/2026-02-02-01.md)
 - [2026-02-01-01](logs/2026-02-01-01.md)
 <!-- RECORD_LIST_2026_02_END -->
