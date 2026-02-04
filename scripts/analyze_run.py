@@ -4,6 +4,8 @@ import glob
 from string import Template
 import PIL.Image
 import requests
+from google import genai
+from google.genai import types
 
 # --- 気象データ取得関数 ---
 def get_weather_data(date_str, time_str):
@@ -19,57 +21,38 @@ def get_weather_data(date_str, time_str):
     except Exception:
         return "気象データ取得失敗"
 
-# --- ライブラリのインポート ---
-from google import genai
-from google.genai import types
-
 # --- 設定 ---
 API_KEY = os.getenv("GEMINI_API_KEY") 
 MODEL_NAME = "gemini-2.5-flash" 
 client = genai.Client(api_key=API_KEY)
-# 追記：環境変数 RUN_MEMO があれば取得する
-run_memo = os.getenv("RUN_MEMO", "")
-TEMPLATE_PATH = "logs/template.md.tpl" 
+TEMPLATE_PATH = "logs/template.md.tpl"
 
-def analyze_images_and_create_md(image_dir, output_md_path, date_str, seq_num):
-    image_paths = glob.glob(os.path.join(image_dir, "*"))
-    valid_exts = ['.jpg', '.jpeg', '.png', '.webp', '.heic']
+def analyze_run(image_paths, identifier):
+    # --- ステップ1: 画像から基本情報を抽出 ---
+    images = [PIL.Image.open(p) for p in image_paths]
     
-    image_objects = []
-    identifier = f"{date_str}-{seq_num}"
-    img_tags_list = []
-
-    print(f"🤖 {len(image_paths)}枚の画像を読み込み中...")
-
-    image_paths.sort()
-    for p in image_paths:
-        if os.path.splitext(p)[1].lower() in valid_exts:
-            fname = os.path.basename(p)
-            tag = f'<img src="../images/{identifier}/{fname}" width="400" loading="lazy" decoding="async" />'
-            img_tags_list.append(tag)
-            try:
-                img = PIL.Image.open(p)
-                image_objects.append(img)
-            except Exception:
-                print(f"⚠️ スキップ: {p}")
-
-    img_tags_str = "\n".join(img_tags_list)
-
-    # --- ステップ1: AIに開始時間を教えてもらう ---
-    print("🕒 開始時刻を抽出中...")
-    time_prompt = "これらの画像から、ランニングの開始時間をHH形式（2桁の数字のみ）で回答してください。例: 07, 10, 15。数字以外は不要です。"
+    # 最初の解析：日付と時間を特定
+    initial_prompt = "このランニングデータのスクリーンショットから、『走行日』と『開始時刻』を抽出してください。返信は 'YYYY-MM-DD, HH:MM' の形式のみで行ってください。"
+    response = client.models.generate_content(model=MODEL_NAME, contents=[initial_prompt] + images)
+    
     try:
-        time_res = client.models.generate_content(model=MODEL_NAME, contents=[time_prompt, *image_objects])
-        start_hour = time_res.text.strip().zfill(2)[:2] # 最初の2文字を数字として取得
-        if not start_hour.isdigit(): start_hour = "07" # 失敗時はデフォルト07
-    except:
-        start_hour = "07"
+        info = response.text.strip().split(', ')
+        date_str = info[0]
+        start_time = info[1]
+        start_hour = start_time.split(':')[0]
+    except Exception:
+        date_str = "不明"
+        start_time = "00:00"
+        start_hour = "0"
 
-    # --- ステップ2: その時間の天気を取得 ---
-    weather_info = get_weather_data(date_str, f"{start_hour}:00")
-    print(f"🌡️ {start_hour}時の気象データを取得しました: {weather_info}")
+    # --- ステップ2: 気象データを取得 ---
+    weather_info = get_weather_data(date_str, start_time)
+    print(f"🌤️ {start_hour}時の気象データを取得しました: {weather_info}")
 
-    # --- ステップ3: テンプレートとメモを準備 ---
+    # --- ステップ3: テンプレート準備 ---
+    img_tags = [f'  - <img src="../images/{identifier}/{os.path.basename(p)}" width="300">' for p in image_paths]
+    img_tags_str = "\n".join(img_tags)
+    
     try:
         with open(TEMPLATE_PATH, 'r', encoding='utf-8') as f:
             tpl_content = f.read()
@@ -78,15 +61,10 @@ def analyze_images_and_create_md(image_dir, output_md_path, date_str, seq_num):
     except Exception:
         draft_content = f"Date: {date_str}\n\n{img_tags_str}"
 
-    USER_MEMO = os.getenv("RUN_MEMO", "（なし）")
-
-    # 🌟 ここに1行追加：環境変数を読み込む
+    # 環境変数からメモを取得
     run_memo = os.getenv("RUN_MEMO", "特になし")
 
-# --- ステップ4: 全データを合体させて最終解析 ---
-    # 環境変数 RUN_MEMO を取得（もし空なら「特になし」にする）
-    run_memo = os.getenv("RUN_MEMO", "特になし")
-
+    # --- ステップ4: 全データを合体させて最終解析 ---
     final_prompt = f"""
     今回のランニングに関する追加メモ（シューズ情報など）: {run_memo}
 
@@ -98,24 +76,26 @@ def analyze_images_and_create_md(image_dir, output_md_path, date_str, seq_num):
     【記入ルール】
     1. 形式はMarkdown。時間は HH:MM:SS、距離は km。
     2. シューズ欄には、メモにあるシューズ名を反映させてください。
-    3. コーチコメント欄は、まず「{run_memo}」という報告に対して、親しみやすい一言（例：スーパーノヴァの初陣お疲れ様です！など）から始めてください。
+    3. コーチコメント欄は、まず「{run_memo}」という報告に対して、親しみやすい一言（例：インフィニットプロでのリカバリーお疲れ様です！など）から始めてください。
     4. その上で、気象条件や目標タイムに向けた論理的な分析を「熱く」語ってください。
+
+    提供された画像と、取得した天気・時間データを統合して、Markdown形式のログを出力してください。
+    出力はMarkdownのコードブロックを含まない、純粋なテキストのみにしてください。
     """
+
+    response = client.models.generate_content(model=MODEL_NAME, contents=[final_prompt] + images)
     
-
-    【対象テキスト】
-    {draft_content}
-    """
-
-    try:
-        print("🤖 最終レポートを作成中...")
-        response = client.models.generate_content(model=MODEL_NAME, contents=[final_prompt, *image_objects])
-        ai_text = response.text.replace("```markdown", "").replace("```", "").strip()
-        with open(output_md_path, 'w', encoding='utf-8') as f:
-            f.write(ai_text)
-        print(f"✅ ログ完成！: {output_md_path}")
-    except Exception as e:
-        print(f"❌ エラー: {e}")
+    output_path = f"logs/{identifier}.md"
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(response.text)
+    
+    print(f"✅ ログを生成しました: {output_path}")
 
 if __name__ == "__main__":
-    analyze_images_and_create_md(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    if len(sys.argv) < 3:
+        print("Usage: python analyze_run.py [identifier] [image_paths...]")
+        sys.exit(1)
+    
+    target_id = sys.argv[1]
+    paths = sys.argv[2:]
+    analyze_run(paths, target_id)
