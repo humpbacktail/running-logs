@@ -27,6 +27,8 @@ from google.genai import types
 API_KEY = os.getenv("GEMINI_API_KEY") 
 MODEL_NAME = "gemini-2.5-flash" 
 client = genai.Client(api_key=API_KEY)
+# 追記：環境変数 RUN_MEMO があれば取得する
+run_memo = os.getenv("RUN_MEMO", "")
 TEMPLATE_PATH = "logs/template.md.tpl" 
 
 def analyze_images_and_create_md(image_dir, output_md_path, date_str, seq_num):
@@ -78,20 +80,28 @@ def analyze_images_and_create_md(image_dir, output_md_path, date_str, seq_num):
 
     USER_MEMO = os.getenv("RUN_MEMO", "（なし）")
 
-    # --- ステップ4: 全データを合体させて最終解析 ---
+    # 🌟 ここに1行追加：環境変数を読み込む
+    run_memo = os.getenv("RUN_MEMO", "特になし")
+
+# --- ステップ4: 全データを合体させて最終解析 ---
+    # 環境変数 RUN_MEMO を取得（もし空なら「特になし」にする）
+    run_memo = os.getenv("RUN_MEMO", "特になし")
+
     final_prompt = f"""
+    今回のランニングに関する追加メモ（シューズ情報など）: {run_memo}
+
     あなたはMASA専用のランニング・エージェントです。目標は3/15板橋シティでのサブ4。
-
-    【入力情報】
-    - ユーザーメモ: {USER_MEMO}
-    - 抽出された開始時刻: {start_hour}時
-    - 当時の正確な気象データ: {weather_info}
-
+    
+    【状況】
+    ユーザー（MASAさん）から、今日のランニングデータと「{run_memo}」というメモを受け取りました。
+    
     【記入ルール】
-    1. 時間は HH:MM:SS、距離は小文字 km。
-    2. メモのシューズ名を反映。
-    3. 天候欄には必ず「{start_hour}時頃の気象データ: {weather_info}」を反映。
-    4. コーチコメントは、この気象条件とサブ4目標（3/15）を照らし合わせて熱く記述。
+    1. 形式はMarkdown。時間は HH:MM:SS、距離は km。
+    2. シューズ欄には、メモにあるシューズ名を反映させてください。
+    3. コーチコメント欄は、まず「{run_memo}」という報告に対して、親しみやすい一言（例：スーパーノヴァの初陣お疲れ様です！など）から始めてください。
+    4. その上で、気象条件や目標タイムに向けた論理的な分析を「熱く」語ってください。
+    """
+    
 
     【対象テキスト】
     {draft_content}
