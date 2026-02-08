@@ -1,124 +1,41 @@
 #!/bin/bash
-set -euo pipefail
 
-# 一時ファイルを作る
-TEMP_TPL="$(mktemp)"
-TEMP_IMG_BLOCK="$(mktemp)"
+UPLOAD_BASE="upload"
+TARGET_DATE_DIR=$(ls -1 "$UPLOAD_BASE" | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' | head -n 1)
 
-# 失敗・正常終了どちらでも掃除（未定義でもOKにする）
-trap 'rm -f -- "${TEMP_TPL:-}" "${TEMP_IMG_BLOCK:-}"' EXIT
-
-echo "🔧 ログエントリー作成スクリプト開始（$(date)）"
-
-# --- 1. 日付と連番の決定 ---
-BASE_DATE=$(find upload -mindepth 1 -maxdepth 1 -type d -print0 | xargs -0 stat -f "%m %N" | sort -n | tail -1 | cut -d' ' -f2- | cut -d'/' -f2 | cut -d'-' -f1-3)
-
-if [ -z "$BASE_DATE" ]; then
-  echo "❌ upload/ 以下に日付フォルダが見つかりません。処理を中止します。"
-  exit 1
+if [ -z "$TARGET_DATE_DIR" ]; then
+    echo "❌ uploadフォルダ内に処理待ちの日付フォルダが見つかりません。"
+    exit 1
 fi
 
-LAST_NUMBER=0
-for f in logs/${BASE_DATE}-*.md; do
-    if [ -f "$f" ]; then
-        num_part=$(echo "$f" | sed -E "s|logs/${BASE_DATE}-([0-9]+)\.md|\1|")
-        if [[ "$num_part" =~ ^[0-9]+$ ]] && (( 10#$num_part > LAST_NUMBER )); then
-            LAST_NUMBER=$num_part
-        fi
+DATE="$TARGET_DATE_DIR"
+IDENTIFIER="${DATE}-01"
+TARGET_DIR="images/${IDENTIFIER}"
+UPLOAD_DIR="${UPLOAD_BASE}/${DATE}"
+LOG_FILE="logs/${IDENTIFIER}.md"
+
+echo "🔧 ログエントリー作成スクリプト開始"
+
+if [ -d "$UPLOAD_DIR" ]; then
+    mkdir -p "$TARGET_DIR"
+    echo "📂 画像を $UPLOAD_DIR から $TARGET_DIR へ移動中..."
+    mv "$UPLOAD_DIR"/* "$TARGET_DIR/"
+    rm -rf "$UPLOAD_DIR" # 移動後はフォルダごと消去してスッキリさせる
+    echo "✅ 画像の移動が完了しました。"
+fi
+
+IMAGE_FILES=$(ls "$TARGET_DIR"/*.{png,jpg,jpeg,PNG,JPG,JPEG} 2>/dev/null)
+
+if [ -n "$IMAGE_FILES" ]; then
+    echo "📝 解析・生成中: $LOG_FILE"
+    # Pythonが失敗した場合は、そこで中断メッセージを出して終了する
+    if python3 scripts/analyze_run.py "$IDENTIFIER" $IMAGE_FILES; then
+        echo "✨ 全工程が完了しました: $LOG_FILE"
+    else
+        echo "⚠️ 解析中にエラーが発生しました。時間を置いて再試行してください。"
+        exit 1
     fi
-done
-NEXT_NUMBER=$((LAST_NUMBER + 1))
-FORMATTED_NUMBER=$(printf "%02d" "$NEXT_NUMBER")
-
-LOG_IDENTIFIER="${BASE_DATE}-${FORMATTED_NUMBER}"
-UPLOAD_DIR="upload/${BASE_DATE}"
-IMAGE_DIR="images/${LOG_IDENTIFIER}"
-LOG_FILE="logs/${LOG_IDENTIFIER}.md"
-TEMPLATE_FILE="logs/template.md.tpl"
-
-# ★ 追加（＝前倒し）：画像HTMLを作る前にIDENTIFIERを設定しておく
-export IDENTIFIER="${LOG_IDENTIFIER}"
-
-if [ ! -f "$TEMPLATE_FILE" ]; then
-  echo "❌ テンプレートファイルが見つかりません: ${TEMPLATE_FILE}"
-  exit 1
-fi
-
-mkdir -p "${IMAGE_DIR}"
-
-echo "📂 画像を ${UPLOAD_DIR} から ${IMAGE_DIR} へ移動中..."
-if [ -d "${UPLOAD_DIR}" ] && [ "$(ls -A "${UPLOAD_DIR}")" ]; then
-  mv "${UPLOAD_DIR}"/* "${IMAGE_DIR}/"
-  echo "✅ 画像の移動が完了しました。"
-  rm -rf "${UPLOAD_DIR}"
-  echo "🗑️ ${UPLOAD_DIR} を削除しました。"
 else
-  echo "⚠️ ${UPLOAD_DIR} が存在しないか空のため、画像移動をスキップします。"
-  if [ -d "${UPLOAD_DIR}" ]; then
-    rmdir "${UPLOAD_DIR}" 2>/dev/null || true
-  fi
-  echo "ℹ️ ${UPLOAD_DIR} に画像が見つからなかったため、ログファイルの生成をスキップし、処理を終了します。"
-  exit 0
+    echo "❌ 画像が見つかりません"
+    exit 1
 fi
-
-TEMP_IMG_BLOCK=$(mktemp)
-if compgen -G "${IMAGE_DIR}/*" > /dev/null; then
-  shopt -s nullglob nocaseglob
-  for img in "${IMAGE_DIR}"/*.{jpg,jpeg,png,gif,webp}; do
-    filename="$(basename "$img")"
-    cat >> "${TEMP_IMG_BLOCK}" <<EOF
-<img src="../images/${LOG_IDENTIFIER}/${filename}" width="400" loading="lazy" decoding="async" />
-EOF
-  done
-  shopt -u nullglob nocaseglob
-else
-  echo "（写真なし）" >> "${TEMP_IMG_BLOCK}"
-fi
-
-echo "📝 Markdownファイルを生成中: ${LOG_FILE}"
-
-# === ▼ ここから書き換え・追加 ▼ ===
-
-# AI解析スクリプトを実行
-# 引数: 画像ディレクトリ, 出力ファイルパス, 日付, 連番
-python3 scripts/analyze_run.py "${IMAGE_DIR}" "${LOG_FILE}" "${BASE_DATE}" "${FORMATTED_NUMBER}"
-
-# もしPythonが失敗したりAPIキーがなくてファイルが作られなかった場合のための予備処理（既存のテンプレート処理）
-if [ ! -f "${LOG_FILE}" ]; then
-  echo "⚠️ AI解析がスキップされたため、従来のテンプレートから空のファイルを生成します。"
-  
-  # 画像ブロック用の一時作成（既存ロジック）
-  TEMP_IMG_BLOCK=$(mktemp)
-  if compgen -G "${IMAGE_DIR}/*" > /dev/null; then
-    shopt -s nullglob nocaseglob
-    for img in "${IMAGE_DIR}"/*.{jpg,jpeg,png,gif,webp}; do
-      filename="$(basename "$img")"
-      cat >> "${TEMP_IMG_BLOCK}" <<EOF
-<img src="../images/${LOG_IDENTIFIER}/${filename}" width="400" loading="lazy" decoding="async" />
-EOF
-    done
-    shopt -u nullglob nocaseglob
-  else
-    echo "（写真なし）" >> "${TEMP_IMG_BLOCK}"
-  fi
-
-  # テンプレート流し込み（既存ロジック）
-  TEMP_TPL=$(mktemp)
-  sed "/\${IMAGES}/ {
-    r ${TEMP_IMG_BLOCK}
-    d
-  }" "${TEMPLATE_FILE}" > "$TEMP_TPL"
-
-  export DATE="${BASE_DATE}"
-  export SEQ="${FORMATTED_NUMBER}"
-  export IDENTIFIER="${LOG_IDENTIFIER}"
-  envsubst '${DATE} ${SEQ} ${IDENTIFIER}' < "$TEMP_TPL" > "${LOG_FILE}"
-
-  rm "$TEMP_TPL" "${TEMP_IMG_BLOCK}"
-fi
-
-# === ▲ ここまで ▲ ===
-
-echo "✅ Markdownログ生成完了: ${LOG_FILE}"
-# （...以下、終了メッセージ...）
-

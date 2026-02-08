@@ -4,14 +4,16 @@ import re
 import PIL.Image
 import requests
 from google import genai
+from datetime import datetime
 
-# --- 設定 ---
+# --- 基本設定 ---
 API_KEY = os.getenv("GEMINI_API_KEY") 
-MODEL_NAME = "gemini-2.0-flash" 
+MODEL_NAME = "gemini-2.0-flash"
 client = genai.Client(api_key=API_KEY)
 run_memo = os.getenv("RUN_MEMO", "特になし")
 
 def get_weather_data(date_str, time_str):
+    """気象情報を外部APIから取得"""
     lat, lon = 35.61, 139.60 
     url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={date_str}&end_date={date_str}&hourly=temperature_2m,weather_code,wind_speed_10m&timezone=Asia%2FTokyo"
     try:
@@ -20,73 +22,82 @@ def get_weather_data(date_str, time_str):
         target_hour = int(time_str.split(':')[0])
         temp = data['hourly']['temperature_2m'][target_hour]
         wind = data['hourly']['wind_speed_10m'][target_hour]
-        return f"気温: {temp}℃, 風速: {wind}m/s"
+        return f"{target_hour}時頃: 気温: {temp}℃, 風速: {wind}m/s"
     except:
-        return "気象データ取得失敗"
+        return "データ取得失敗"
 
 def analyze_run(image_paths, target_id):
     valid_images = [p for p in image_paths if p.lower().endswith(('.png', '.jpg', '.jpeg'))]
-    if not valid_images:
-        print("❌ 解析対象の画像が見つかりません。")
-        return
+    if not valid_images: return
+
+    file_times = [datetime.fromtimestamp(os.path.getmtime(p)).strftime('%H:%M') for p in valid_images]
+    hint_time = file_times[0] if file_times else "不明"
 
     print(f"📸 {len(valid_images)}枚の画像を解析中...")
     images = [PIL.Image.open(p) for p in valid_images]
 
-    # ステップ1: データ抽出
-    initial_prompt = "ランニングのスクショから日付(YYYY/MM/DD)、開始時刻(HH:MM)、距離(km)、タイム(HH:MM:SS)、平均ペースを抽出してください。"
-    try:
-        response = client.models.generate_content(model=MODEL_NAME, contents=[initial_prompt, *images])
-        raw_data = response.text
-    except Exception as e:
-        print(f"❌ Gemini APIエラー: {e}")
-        return
+    # --- 1. AIへの指示（プロンプト） ---
+    main_prompt = f"""
+    あなたはプロのランニングコーチ兼、精密なデータ入力担当者です。
+    余計な挨拶や前置きは一切不要。直ちに【絶対厳守フォーマット】でMarkdownを出力せよ。
 
-    # ステップ2: 天気
-    date_match = re.search(r"(\d{4}/\d{2}/\d{2})", raw_data)
-    time_match = re.search(r"(\d{2}:\d{2})", raw_data)
-    date_str = date_match.group(1).replace("/", "-") if date_match else target_id[:10]
-    time_str = time_match.group(1) if time_match else "08:00"
-    weather_info = get_weather_data(date_str, time_str)
+    ### 抽出の掟:
+    - 画像内の「今日の目的」「コメント」「睡眠時間/スコア」「コース」は、要約せずそのまま正確に書き写すこと。
+    - 時間帯は画像内の「開始時刻」を最優先とし、不明な場合のみヒント【 {hint_time} 】を使え。
+    - 項目を削ることは厳禁。不明な場合は「不明」と書け。
 
-    # ステップ3: Markdown生成
-    final_prompt = f"""
-    あなたはMASA専用のコーチです。3/15板橋シティでのサブ4が目標です。
-    以下の情報を元に、ブログ記事（Markdown）を完成させてください。
-    
-    【入力情報】
-    - メモ: {run_memo}
-    - データ: {raw_data}
-    - 天気: {weather_info}
-
-    【出力形式】
+    【絶対厳守フォーマット】
     ---
     title: "🏃‍♂️ {target_id} のランログ"
-    date: {date_str}
+    date: (YYYY-MM-DD形式)
     ---
-    - 距離：(距離) km
-    - 時間：(タイム)
+
+    - 距離：
+    - 時間：
+    - 平均心拍数：
     - 使用シューズ：{run_memo}
-    - 天候：{weather_info}
-    - コメント：(ランニングの内容を短く)
+    - 時間帯：(XX時)
+    - 天候：(解析中)
+    - コース：
+    - 補給：
+    - 睡眠：
+    - 今日の目的：
+    - コメント：
 
     ## 📝 コーチコメント
-    (サブ4目標に向けた熱いコメントを300文字程度で)
-
-    ## 📸 写真
-    (画像をここへ表示)
+    (板橋シティマラソンでサブ4達成のための、熱く具体的なアドバイスを300文字以上で)
     """
 
-    response_final = client.models.generate_content(model=MODEL_NAME, contents=[final_prompt, *images])
+    response = client.models.generate_content(model=MODEL_NAME, contents=[main_prompt, *images])
+    md_content = response.text
+
+    # --- 2. 天気情報の強制挿入（Python側で柔軟に検索） ---
+    date_match = re.search(r"date:\s*(\d{4}-\d{2}-\d{2})", md_content)
+    # 1桁の「0時」から2桁の「23時」まで確実にヒットするように修正
+    time_match = re.search(r"時間帯：.*?(\d{1,2})時", md_content)
     
-    # 強制的に上書き保存
+    if date_match and time_match:
+        actual_weather = get_weather_data(date_match.group(1), f"{time_match.group(1)}:00")
+        md_content = re.sub(r"- 天候：.*", f"- 天候：{actual_weather}", md_content)
+
+    # --- 3. 写真一覧の強制生成（AIに頼らずPythonが担当） ---
+    photo_section = "\n\n## 📸 写真一覧\n"
+    for img_path in valid_images:
+        filename = os.path.basename(img_path)
+        photo_section += f'<img src="../images/{target_id}/{filename}" width="400" loading="lazy" decoding="async">\n'
+
+    if "## 📸 写真一覧" in md_content:
+        final_md = md_content.split("## 📸 写真一覧")[0] + photo_section
+    else:
+        final_md = md_content + photo_section
+
+    # --- 4. 保存 ---
     output_path = f"logs/{target_id}.md"
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write(response_final.text)
-    
-    print(f"✅ 書き込み完了: {output_path}")
+        f.write(final_md)
+
+    print(f"✅ 全仕様を遵守して生成完了: {output_path}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        sys.exit(1)
+    if len(sys.argv) < 3: sys.exit(1)
     analyze_run(sys.argv[2:], sys.argv[1])
