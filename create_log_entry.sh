@@ -37,5 +37,6 @@ mv "$UPLOAD_DIR/$SRC_DIR"/* "$IMAGES_DIR/$TARGET_ID/"
 # 空になったupload側の日付フォルダを削除
 rmdir "$UPLOAD_DIR/$SRC_DIR"
 
-# 5. Pythonによる解析実行
-python3 analyze_run.py "$TARGET_ID" "$IMAGES_DIR/$TARGET_ID"/*
+# 5. Pythonによる解析実行 (scripts/ を追加)
+python3 scripts/analyze_run.py "$TARGET_ID" "$IMAGES_DIR/$TARGET_ID"/*
+
