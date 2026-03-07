@@ -184,6 +184,114 @@ def generate_weekly_summary_markdown(LOGS_DIR: str) -> str:
     return "\n".join(lines)
 
 
+INDEX_PATH = os.path.join(SCRIPT_DIR, "../index.md")
+
+# 距離カテゴリの定義
+DISTANCE_CATEGORIES = [
+    {"label": "フルマラソン 🏅", "min": 40.0, "max": 43.0},
+    {"label": "ハーフマラソン 🥈", "min": 19.0, "max": 22.0},
+    {"label": "10km 🥉",          "min": 9.0,  "max": 11.0},
+    {"label": "5km ⭐",            "min": 4.0,  "max": 6.0},
+]
+
+def generate_best_records_markdown():
+    """距離カテゴリ別のベストタイムを計算してMarkdownを生成"""
+    # カテゴリごとにベスト候補を収集
+    bests = {cat["label"]: None for cat in DISTANCE_CATEGORIES}
+
+    for filename in os.listdir(LOGS_DIR):
+        if not filename.endswith(".md"):
+            continue
+        filepath = os.path.join(LOGS_DIR, filename)
+        km, duration = parse_log_file(filepath)
+        if km == 0 or duration.total_seconds() == 0:
+            continue
+
+        for cat in DISTANCE_CATEGORIES:
+            if cat["min"] <= km <= cat["max"]:
+                label = cat["label"]
+                if bests[label] is None or duration < bests[label]["duration"]:
+                    bests[label] = {
+                        "duration": duration,
+                        "km": km,
+                        "filename": filename,
+                        "date": filename[:10],
+                    }
+
+    lines = []
+    for cat in DISTANCE_CATEGORIES:
+        label = cat["label"]
+        best = bests[label]
+        if best:
+            total_sec = int(best["duration"].total_seconds())
+            h = total_sec // 3600
+            m = (total_sec % 3600) // 60
+            s = total_sec % 60
+            time_str = f"{h}:{m:02d}:{s:02d}" if h > 0 else f"{m}:{s:02d}"
+            pace_sec = total_sec / best["km"]
+            pm, ps = divmod(int(round(pace_sec)), 60)
+            pace_str = f"{pm}'{ps:02d}\"/km"
+            log_link = f"[{best['date']}](logs/{best['filename']})"
+            lines.append(f"| {label} | {best['km']:.1f} km | **{time_str}** | {pace_str} | {log_link} |")
+        else:
+            lines.append(f"| {label} | - | - | - | - |")
+
+    header = "| 種目 | 距離 | タイム | ペース | ログ |\n|------|------|--------|--------|------|\n"
+    return header + "\n".join(lines)
+
+def generate_recent_logs_markdown(n=5):
+    """最近のログn件をMarkdownリストで生成"""
+    files = sorted(
+        [f for f in os.listdir(LOGS_DIR) if f.endswith(".md")],
+        reverse=True
+    )[:n]
+
+    lines = []
+    for f in files:
+        label = f.replace(".md", "")
+        km, duration = parse_log_file(os.path.join(LOGS_DIR, f))
+        total_sec = int(duration.total_seconds())
+        h = total_sec // 3600
+        m = (total_sec % 3600) // 60
+        s = total_sec % 60
+        time_str = f"{h}:{m:02d}:{s:02d}" if h > 0 else f"{m}:{s:02d}"
+        km_str = f"{km:.1f} km" if km > 0 else "-"
+        lines.append(f"- [{label}](logs/{f}) — {km_str} / {time_str}")
+    return "\n".join(lines)
+
+def update_index():
+    """index.mdのベスト記録と最近のログを更新"""
+    best_md = generate_best_records_markdown()
+    recent_md = generate_recent_logs_markdown(5)
+
+    with open(INDEX_PATH, "r", encoding="utf-8") as f:
+        index = f.read()
+
+    # ベスト記録セクション
+    if "<!-- BEST_RECORDS_START -->" in index and "<!-- BEST_RECORDS_END -->" in index:
+        index = re.sub(
+            r"(<!-- BEST_RECORDS_START -->)(.*?)(<!-- BEST_RECORDS_END -->)",
+            f"\\1\n{best_md}\n\\3",
+            index, flags=re.DOTALL
+        )
+    else:
+        best_section = f"\n## 🏆 ベスト記録\n\n<!-- BEST_RECORDS_START -->\n{best_md}\n<!-- BEST_RECORDS_END -->\n"
+        index += best_section
+
+    # 最近のログセクション
+    if "<!-- RECENT_LOGS_START -->" in index and "<!-- RECENT_LOGS_END -->" in index:
+        index = re.sub(
+            r"(<!-- RECENT_LOGS_START -->)(.*?)(<!-- RECENT_LOGS_END -->)",
+            f"\\1\n{recent_md}\n\\3",
+            index, flags=re.DOTALL
+        )
+    else:
+        recent_section = f"\n## 📋 最近のログ\n\n<!-- RECENT_LOGS_START -->\n{recent_md}\n<!-- RECENT_LOGS_END -->\n"
+        index += recent_section
+
+    with open(INDEX_PATH, "w", encoding="utf-8") as f:
+        f.write(index)
+
 def update_readme():
     new_summary = generate_summary_markdown()
     new_record_list = generate_record_list_markdown()
@@ -237,4 +345,6 @@ def update_readme():
 if __name__ == "__main__":
     print("📝 README.md の月間サマリーと記録一覧を更新中...")
     update_readme()
+    print("🏆 index.md のベスト記録と最近のログを更新中...")
+    update_index()
     print("✅ 完了！")
