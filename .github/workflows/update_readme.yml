@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'logs/**.md'
+  workflow_dispatch:
 
 jobs:
   update:
