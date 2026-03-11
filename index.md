@@ -1,5 +1,5 @@
 ---
-layout: page     # ← ここを page に
+layout: default
 title: MASA Running Logs
 ---
 
