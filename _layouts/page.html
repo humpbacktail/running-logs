@@ -1,11 +1,30 @@
 ---
 layout: default
 ---
-<article class="page">
-  <header class="page-header">
-    <h1 class="page-title">{{ page.title | escape }}</h1>
-  </header>
-  <div class="page-content">
+<div class="log-hero">
+  <div class="log-hero-inner">
+    <div class="breadcrumb">
+      <a href="{{ '/' | relative_url }}">Home</a>
+      <span>/</span>
+      <a href="{{ '/logs/' | relative_url }}">Log一覧</a>
+      <span>/</span>
+      <span>{{ page.title }}</span>
+    </div>
+    <div class="log-hero-date">// {{ page.date | date: "%Y.%m.%d" }}</div>
+    <h1 class="log-hero-title">{{ page.title }}</h1>
+  </div>
+  <div class="wave-container">
+    <svg class="wave wave1" viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,40 C240,80 480,0 720,40 C960,80 1200,0 1440,40 L1440,80 L0,80 Z" fill="#f0f7ff"/>
+    </svg>
+    <svg class="wave wave2" viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,40 C240,0 480,80 720,40 C960,0 1200,80 1440,40 L1440,80 L0,80 Z" fill="rgba(240,247,255,0.4)"/>
+    </svg>
+  </div>
+</div>
+
+<div class="log-body">
+  <div class="log-content">
     {{ content }}
   </div>
-</article>
+</div>
