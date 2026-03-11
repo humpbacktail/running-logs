@@ -1,13 +1,30 @@
 <!DOCTYPE html>
-<html lang="{{ site.lang | default: 'ja' }}">
-  <head>{%- include head.html -%}</head>
-  <body>
-    {%- include header.html -%}
-    <main class="page-content" aria-label="Content">
-      <div class="wrapper">
-        {{ content }}
-      </div>
-    </main>
-    {%- include footer.html -%}
-  </body>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if page.title %}{{ page.title }} — {% endif %}MASA Running Logs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&family=Noto+Sans+JP:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ '/assets/main.css' | relative_url }}">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="{{ '/' | relative_url }}" class="logo">MASA <span>Run</span></a>
+      <nav>
+        <a href="{{ '/' | relative_url }}" class="nav-link {% if page.url == '/' %}active{% endif %}">Home</a>
+        <a href="{{ '/logs/' | relative_url }}" class="nav-link {% if page.url contains '/logs' %}active{% endif %}">Log一覧</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    {{ content }}
+  </main>
+
+  <footer class="site-footer">
+    <span>MASA Running Logs — Chofu, Tokyo</span>
+    <span class="footer-accent">Built with 🏃 + AI</span>
+  </footer>
+</body>
 </html>
