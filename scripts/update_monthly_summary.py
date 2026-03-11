@@ -189,7 +189,7 @@ INDEX_PATH = os.path.join(SCRIPT_DIR, "../index.html")
 # 距離カテゴリの定義
 DISTANCE_CATEGORIES = [
     {"label": "フルマラソン 🏅", "min": 40.0, "max": 43.0},
-    {"label": "ハーフマラソン 🥈", "min": 19.0, "max": 22.0},
+    {"label": "ハーフマラソン 🥈", "min": 21.0, "max": 23.0},
     {"label": "10km 🥉",          "min": 9.0,  "max": 11.0},
     {"label": "5km ⭐",            "min": 4.0,  "max": 6.0},
 ]
