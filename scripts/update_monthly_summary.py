@@ -184,7 +184,7 @@ def generate_weekly_summary_markdown(LOGS_DIR: str) -> str:
     return "\n".join(lines)
 
 
-INDEX_PATH = os.path.join(SCRIPT_DIR, "../index.md")
+INDEX_PATH = os.path.join(SCRIPT_DIR, "../index.html")
 
 # 距離カテゴリの定義
 DISTANCE_CATEGORIES = [
