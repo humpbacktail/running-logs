@@ -195,8 +195,13 @@ DISTANCE_CATEGORIES = [
 ]
 
 def generate_best_records_markdown():
-    """距離カテゴリ別のベストタイムを計算してMarkdownを生成"""
-    # カテゴリごとにベスト候補を収集
+    """距離カテゴリ別のベストタイムをHTML形式で生成"""
+    MEDAL_MAP = {
+        "フルマラソン 🏅": ("🏅", "Full Marathon"),
+        "ハーフマラソン 🥈": ("🥈", "Half Marathon"),
+        "10km 🥉": ("🥉", "10km"),
+        "5km ⭐": ("⭐", "5km"),
+    }
     bests = {cat["label"]: None for cat in DISTANCE_CATEGORIES}
 
     for filename in os.listdir(LOGS_DIR):
@@ -206,7 +211,6 @@ def generate_best_records_markdown():
         km, duration = parse_log_file(filepath)
         if km == 0 or duration.total_seconds() == 0:
             continue
-
         for cat in DISTANCE_CATEGORIES:
             if cat["min"] <= km <= cat["max"]:
                 label = cat["label"]
@@ -222,6 +226,7 @@ def generate_best_records_markdown():
     for cat in DISTANCE_CATEGORIES:
         label = cat["label"]
         best = bests[label]
+        medal, en_label = MEDAL_MAP.get(label, ("", label))
         if best:
             total_sec = int(best["duration"].total_seconds())
             h = total_sec // 3600
@@ -230,19 +235,41 @@ def generate_best_records_markdown():
             time_str = f"{h}:{m:02d}:{s:02d}" if h > 0 else f"{m}:{s:02d}"
             pace_sec = total_sec / best["km"]
             pm, ps = divmod(int(round(pace_sec)), 60)
-            pace_str = f"{pm}'{ps:02d}\"/km"
-            log_link = f"[{best['date']}](logs/{best['filename']})"
-            lines.append(f"| {label} | {best['km']:.1f} km | **{time_str}** | {pace_str} | {log_link} |")
+            pace_str = f"{pm}\'{ps:02d}\"/km"
+            log_name = best["filename"].replace(".md", "")
+            log_url = f"/running-logs/logs/{log_name}.html"
+            lines.append(
+                f'''    <div class="record-card">
+'''
+                f'''      <div class="record-cat">{medal} {en_label}</div>
+'''
+                f'''      <div class="record-time">{time_str}</div>
+'''
+                f'''      <div class="record-meta">{best["km"]:.1f} km · {pace_str}<br><a href="{log_url}">{best["date"]} →</a></div>
+'''
+                f'''    </div>'''
+            )
         else:
-            lines.append(f"| {label} | - | - | - | - |")
+            lines.append(
+                '''    <div class="record-card">
+'''
+                f'''      <div class="record-cat">{medal} {en_label}</div>
+'''
+                '''      <div class="record-time">-</div>
+'''
+                '''      <div class="record-meta">記録なし</div>
+'''
+                '''    </div>'''
+            )
 
-    header = "| 種目 | 距離 | タイム | ペース | ログ |\n|------|------|--------|--------|------|\n"
-    return header + "\n".join(lines)
+    return "\n".join(lines)
+
 
 def generate_recent_logs_markdown(n=5):
-    """最近のログn件をMarkdownリストで生成"""
+    """最近のログn件をHTML形式で生成（index.mdファイルは除外）"""
     files = sorted(
-        [f for f in os.listdir(LOGS_DIR) if f.endswith(".md")],
+        [f for f in os.listdir(LOGS_DIR)
+         if f.endswith(".md") and f != "index.md"],
         reverse=True
     )[:n]
 
@@ -256,8 +283,23 @@ def generate_recent_logs_markdown(n=5):
         s = total_sec % 60
         time_str = f"{h}:{m:02d}:{s:02d}" if h > 0 else f"{m}:{s:02d}"
         km_str = f"{km:.1f} km" if km > 0 else "-"
-        lines.append(f"- [{label}](logs/{f}) — {km_str} / {time_str}")
+        date_str = label[:10]
+        log_url = f"/running-logs/logs/{label}.html"
+        lines.append(
+            f'''    <a class="log-item" href="{log_url}">
+'''
+            f'''      <span class="log-date">{date_str}</span>
+'''
+            f'''      <span class="log-km">{km_str}</span>
+'''
+            f'''      <span class="log-time-val">{time_str}</span>
+'''
+            f'''      <span class="log-pace"></span>
+'''
+            f'''    </a>'''
+        )
     return "\n".join(lines)
+
 
 def update_index():
     """index.mdのベスト記録と最近のログを更新"""
