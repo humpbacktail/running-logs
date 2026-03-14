@@ -1,0 +1,549 @@
+---
+layout: default
+title: Stats — MASA Running Logs
+---
+
+<style>
+  /* ========== Stats Page Styles ========== */
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+  .stats-hero {
+    background: linear-gradient(160deg, #0a1628 0%, #0d2b5e 50%, #1a4a8a 100%);
+    padding: 4rem 2rem 6rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stats-hero .hero-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  .stats-hero .hero-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: rgba(160, 200, 255, 0.7);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .stats-hero h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    color: #fff;
+    line-height: 1.1;
+    margin: 0 0 0.5rem;
+  }
+
+  .stats-hero h1 em {
+    font-style: normal;
+    color: #60a5fa;
+  }
+
+  .stats-hero .hero-sub {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.9rem;
+    color: rgba(160, 200, 255, 0.6);
+    margin: 0;
+  }
+
+  .stats-hero .wave-container {
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 80px;
+  }
+
+  .stats-content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* ---- Breadcrumb ---- */
+  .breadcrumb {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-bottom: 2.5rem;
+  }
+
+  .breadcrumb a {
+    color: #3b82f6;
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  /* ---- Section Header ---- */
+  .section-header {
+    margin: 2.5rem 0 1.25rem;
+    border-left: 3px solid #3b82f6;
+    padding-left: 1rem;
+  }
+
+  .section-header h2 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    color: #1e3a5f;
+    margin: 0 0 0.2rem;
+  }
+
+  .section-header .section-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: #94a3b8;
+  }
+
+  /* ---- Summary Cards ---- */
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .summary-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+
+  .summary-card .card-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: #94a3b8;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .summary-card .card-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1e3a5f;
+    line-height: 1;
+  }
+
+  .summary-card .card-unit {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: #64748b;
+  }
+
+  /* ---- Chart Container ---- */
+  .chart-wrap {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+  }
+
+  canvas { width: 100% !important; }
+
+  /* ---- Shoe Table ---- */
+  .shoe-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+  }
+
+  .shoe-table th {
+    background: #f0f7ff;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: #64748b;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.75rem 1rem;
+    text-align: left;
+  }
+
+  .shoe-table td {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.9rem;
+    padding: 0.85rem 1rem;
+    border-top: 1px solid #f1f5f9;
+    color: #1e3a5f;
+  }
+
+  .shoe-table td.km-cell {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: #2563eb;
+  }
+
+  .shoe-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .shoe-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    min-width: 4px;
+    transition: width 0.6s ease;
+  }
+
+  /* ---- Loading / Error ---- */
+  .loading {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    text-align: center;
+    padding: 3rem;
+  }
+
+  .error-msg {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: #ef4444;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  /* ---- Stats Link in index ---- */
+  .stats-link-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    text-decoration: none;
+    margin-bottom: 2rem;
+    transition: box-shadow 0.2s;
+  }
+
+  .stats-link-banner:hover {
+    box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+  }
+
+  .stats-link-banner .banner-left {
+    font-family: 'Space Mono', monospace;
+  }
+
+  .stats-link-banner .banner-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+
+  .stats-link-banner .banner-sub {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 0.2rem;
+  }
+
+  .stats-link-banner .banner-arrow {
+    font-size: 1.5rem;
+    color: #3b82f6;
+  }
+
+  /* ---- Mini Stats (index.html用) ---- */
+  .mini-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .mini-stat-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .mini-stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: #94a3b8;
+    letter-spacing: 0.08em;
+  }
+
+  .mini-stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin-top: 0.2rem;
+  }
+
+  .mini-stat-value span {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: #64748b;
+  }
+
+  @media (max-width: 600px) {
+    .summary-cards { grid-template-columns: repeat(2, 1fr); }
+    .mini-stats-grid { grid-template-columns: 1fr 1fr; }
+    .stats-hero { padding: 2.5rem 1.25rem 5rem; }
+  }
+</style>
+
+<div class="stats-hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">// Running Statistics Dashboard</div>
+    <h1>MASA<br><em>Stats</em></h1>
+    <p class="hero-sub">月間・週間・シューズ別 走行データ</p>
+  </div>
+  <div class="wave-container">
+    <svg class="wave wave1" viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,40 C240,80 480,0 720,40 C960,80 1200,0 1440,40 L1440,80 L0,80 Z" fill="#f0f7ff"/>
+    </svg>
+    <svg class="wave wave2" viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,40 C240,0 480,80 720,40 C960,0 1200,80 1440,40 L1440,80 L0,80 Z" fill="rgba(240,247,255,0.4)"/>
+    </svg>
+  </div>
+</div>
+
+<div class="stats-content">
+  <div class="breadcrumb">
+    <a href="/running-logs/">HOME</a> &nbsp;/&nbsp; STATS
+  </div>
+
+  <div id="stats-loading" class="loading">📊 データを読み込み中...</div>
+  <div id="stats-error" class="error-msg" style="display:none"></div>
+
+  <div id="stats-main" style="display:none">
+
+    <!-- 総合サマリー -->
+    <div class="section-header">
+      <h2>📈 総合サマリー</h2>
+      <div class="section-sub">// All Time Summary</div>
+    </div>
+
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="card-label">Total Distance</div>
+        <div class="card-value" id="total-km">—<span class="card-unit"> km</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">This Month</div>
+        <div class="card-value" id="this-month-km">—<span class="card-unit"> km</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">This Week</div>
+        <div class="card-value" id="this-week-km">—<span class="card-unit"> km</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">Total Runs</div>
+        <div class="card-value" id="total-runs">—<span class="card-unit"> runs</span></div>
+      </div>
+    </div>
+
+    <!-- 月間グラフ -->
+    <div class="section-header">
+      <h2>📅 月間走行距離</h2>
+      <div class="section-sub">// Monthly Distance</div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">月別 走行距離 (km)</div>
+      <canvas id="monthly-chart" height="200"></canvas>
+    </div>
+
+    <!-- 週間グラフ -->
+    <div class="section-header">
+      <h2>🗓️ 週間走行距離</h2>
+      <div class="section-sub">// Weekly Distance — Last 12 Weeks</div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">週別 走行距離 (km) — 直近12週</div>
+      <canvas id="weekly-chart" height="200"></canvas>
+    </div>
+
+    <!-- シューズ別 -->
+    <div class="section-header">
+      <h2>👟 シューズ別走行距離</h2>
+      <div class="section-sub">// Distance by Shoe</div>
+    </div>
+
+    <table class="shoe-table">
+      <thead>
+        <tr>
+          <th>シューズ</th>
+          <th>走行距離</th>
+          <th>本数</th>
+          <th>比率</th>
+        </tr>
+      </thead>
+      <tbody id="shoe-table-body">
+      </tbody>
+    </table>
+
+  </div><!-- /stats-main -->
+</div><!-- /stats-content -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(async function() {
+  const loadingEl = document.getElementById('stats-loading');
+  const errorEl   = document.getElementById('stats-error');
+  const mainEl    = document.getElementById('stats-main');
+
+  // --- stats.json の読み込み ---
+  let stats;
+  try {
+    const res = await fetch('/running-logs/stats.json?_=' + Date.now());
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    stats = await res.json();
+  } catch(e) {
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+    errorEl.textContent = '⚠️ データの読み込みに失敗しました。stats.json が存在するか確認してください。(' + e.message + ')';
+    return;
+  }
+
+  loadingEl.style.display = 'none';
+  mainEl.style.display = 'block';
+
+  // --- 総合サマリー ---
+  const totalKm    = stats.monthly.reduce((s, m) => s + m.km, 0);
+  const totalRuns  = stats.monthly.reduce((s, m) => s + m.count, 0);
+
+  // 今月キー (YYYY-MM)
+  const today = new Date();
+  const thisMonthKey = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
+  const thisMonthData = stats.monthly.find(m => m.month === thisMonthKey);
+
+  // 今週キー (ISO week)
+  function getISOWeek(d) {
+    const tmp = new Date(d);
+    tmp.setHours(0,0,0,0);
+    tmp.setDate(tmp.getDate() + 3 - (tmp.getDay()+6) % 7);
+    const week1 = new Date(tmp.getFullYear(), 0, 4);
+    const weekNum = 1 + Math.round(((tmp-week1)/86400000 - 3 + (week1.getDay()+6)%7) / 7);
+    return tmp.getFullYear() + '-W' + String(weekNum).padStart(2,'0');
+  }
+  const thisWeekKey = getISOWeek(today);
+  const thisWeekData = stats.weekly.find(w => w.week === thisWeekKey);
+
+  document.getElementById('total-km').innerHTML      = totalKm.toFixed(1) + '<span class="card-unit"> km</span>';
+  document.getElementById('this-month-km').innerHTML = (thisMonthData ? thisMonthData.km.toFixed(1) : '0.0') + '<span class="card-unit"> km</span>';
+  document.getElementById('this-week-km').innerHTML  = (thisWeekData  ? thisWeekData.km.toFixed(1)  : '0.0') + '<span class="card-unit"> km</span>';
+  document.getElementById('total-runs').innerHTML    = totalRuns + '<span class="card-unit"> runs</span>';
+
+  // Chart.js 共通設定
+  Chart.defaults.font.family = "'Space Mono', monospace";
+  Chart.defaults.color = '#64748b';
+
+  const chartOpts = (label, color) => ({
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.parsed.y.toFixed(1)} km`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(0,0,0,0.05)' },
+        ticks: { font: { size: 10 }, callback: v => v + ' km' }
+      }
+    }
+  });
+
+  // --- 月間グラフ（古い順） ---
+  const monthlyData = [...stats.monthly].reverse();
+  new Chart(document.getElementById('monthly-chart'), {
+    type: 'bar',
+    data: {
+      labels: monthlyData.map(m => {
+        const [y, mo] = m.month.split('-');
+        return y + '/' + mo;
+      }),
+      datasets: [{
+        label: '月間距離',
+        data: monthlyData.map(m => m.km),
+        backgroundColor: monthlyData.map((m, i) => {
+          const key = m.month;
+          return key === thisMonthKey ? '#2563eb' : 'rgba(96,165,250,0.6)';
+        }),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: chartOpts('月間距離', '#3b82f6')
+  });
+
+  // --- 週間グラフ（直近12週、古い順） ---
+  const weeklyData = [...stats.weekly].slice(0, 12).reverse();
+  new Chart(document.getElementById('weekly-chart'), {
+    type: 'bar',
+    data: {
+      labels: weeklyData.map(w => {
+        if (w.monday) return w.monday.slice(5).replace('-','/');
+        return w.week;
+      }),
+      datasets: [{
+        label: '週間距離',
+        data: weeklyData.map(w => w.km),
+        backgroundColor: weeklyData.map(w => {
+          return w.week === thisWeekKey ? '#2563eb' : 'rgba(96,165,250,0.6)';
+        }),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: chartOpts('週間距離', '#3b82f6')
+  });
+
+  // --- シューズテーブル ---
+  const maxShoeKm = stats.shoes.length > 0 ? stats.shoes[0].km : 1;
+  const tbody = document.getElementById('shoe-table-body');
+  stats.shoes.forEach(s => {
+    const pct = Math.round((s.km / maxShoeKm) * 100);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${s.shoe}</td>
+      <td class="km-cell">${s.km.toFixed(1)} km</td>
+      <td>${s.count} 本</td>
+      <td>
+        <div class="shoe-bar-wrap">
+          <div class="shoe-bar" style="width:${pct}%; max-width:120px"></div>
+          <span style="font-size:0.75rem;color:#64748b;font-family:'Space Mono',monospace">${pct}%</span>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+})();
+</script>
