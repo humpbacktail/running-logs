@@ -8,6 +8,9 @@ collections:
     output: true
     permalink: /logs/:name.html
 
+include:
+  - stats.json
+  
 exclude:
   - logs/template.md.tpl
 
