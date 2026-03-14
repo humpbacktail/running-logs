@@ -8,23 +8,21 @@ collections:
     output: true
     permalink: /logs/:name.html
 
-# ビルド対象外（テンプレは公開しない）
 exclude:
   - logs/template.md.tpl
 
-# 既定レイアウト＆ナビ除外の統合版
 defaults:
-  # _logs コレクションの全ファイルにヘッダー付きレイアウトを適用
   - scope:
       type: logs
       path: ""
     values:
       layout: page
-      nav_exclude: true   # メニューに出さない
+      nav_exclude: true
 
-  # 通常の固定ページにもヘッダー付きレイアウトを既定に
   - scope:
       type: pages
       path: ""
     values:
       layout: page
+
+render_with_liquid: false
