@@ -6,7 +6,7 @@
 
 **実行例：**
 ```
-claude "2026-03-23から2026-03-29のランログをもとに、weekly-summary-prompt.mdのルールに従ってnote記事の下書きを生成して。出力はdrafts/YYYY-MM-DD.mdに保存して"
+claude "先週月曜から日曜のランログをもとに、weekly-summary-prompt.mdのルールに従ってnote記事の下書きを生成して。出力はdrafts/YYYY-MM-DD.mdに保存して"
 ```
 
 ---

@@ -11,8 +11,10 @@
 
 ## 週次まとめの生成方法
 
+前週の月曜〜日曜のランログをもとに、note投稿用の下書きを生成する。
+
 ```
-claude "2026-03-23から2026-03-29のランログをもとに、weekly-summary-prompt.mdのルールに従ってnote記事の下書きを生成して。出力はdrafts/YYYY-MM-DD.mdに保存して"
+claude "先週月曜から日曜のランログをもとに、weekly-summary-prompt.mdのルールに従ってnote記事の下書きを生成して。出力はdrafts/YYYY-MM-DD.mdに保存して"
 ```
 
 `weekly-summary-prompt.md` を必ず参照してから生成すること。
