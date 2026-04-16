@@ -1,0 +1,98 @@
+name: 週次まとめ下書き生成
+
+on:
+  schedule:
+    - cron: '0 0 * * 3'  # 毎週水曜 9:00 JST（UTC 0:00）
+  workflow_dispatch:      # 手動実行も可能
+
+jobs:
+  generate-draft:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Generate weekly draft
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import os
+          import glob
+          from datetime import datetime, timedelta
+          import anthropic
+
+          # 前週の月〜日を計算
+          today = datetime.utcnow() + timedelta(hours=9)  # JST
+          last_sunday = today - timedelta(days=today.weekday() + 1)
+          last_monday = last_sunday - timedelta(days=6)
+
+          start_str = last_monday.strftime("%Y-%m-%d")
+          end_str = last_sunday.strftime("%Y-%m-%d")
+          print(f"集計期間: {start_str} 〜 {end_str}")
+
+          # 前週のログを収集
+          logs = ""
+          for i in range(7):
+              date_str = (last_monday + timedelta(days=i)).strftime("%Y-%m-%d")
+              for path in sorted(glob.glob(f"logs/{date_str}-*.md")):
+                  with open(path, encoding="utf-8") as f:
+                      logs += f"\n--- {os.path.basename(path)} ---\n{f.read()}"
+
+          if not logs:
+              print("⚠️ 対象期間のログが見つかりませんでした。スキップします。")
+              exit(0)
+
+          # 生成ルールを読み込む
+          with open("weekly-summary-prompt.md", encoding="utf-8") as f:
+              rules = f.read()
+
+          # Claude API で下書き生成
+          client = anthropic.Anthropic()
+          message = client.messages.create(
+              model="claude-sonnet-4-6",
+              max_tokens=4096,
+              messages=[{
+                  "role": "user",
+                  "content": f"""{rules}
+
+          ---
+
+          ## 対象期間
+          {start_str}（月）〜 {end_str}（日）
+
+          ## ランログ
+          {logs}
+
+          上記のルールと構成に従って、note投稿用の週次まとめ記事の下書きを書いてください。
+          出力は記事本文のみ（説明文・前置き不要）。"""
+              }]
+          )
+
+          draft = message.content[0].text
+
+          # drafts/YYYY-MM-DD.md に保存（日曜日付）
+          output_path = f"drafts/{end_str}.md"
+          with open(output_path, "w", encoding="utf-8") as f:
+              f.write(draft)
+
+          print(f"✅ 下書きを保存しました: {output_path}")
+          EOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add drafts/
+          git diff --staged --quiet || git commit -m "📝 週次まとめ下書き自動生成 ($(date +'%Y-%m-%d'))"
+          git push
