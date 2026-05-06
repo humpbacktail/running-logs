@@ -25,7 +25,7 @@ def parse_log_file(filepath):
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
 
-    distance_match = re.search(r"距離\s*[：:]\s*([0-9.]+)\s*km", content)
+    distance_match = re.search(r"距離\s*[：:]\s*([0-9.]+)\s*km", content, re.IGNORECASE)
     time_hms_match = re.search(r"時間\s*[：:]\s*(\d{1,2}):(\d{2}):(\d{2})", content)
     shoe_match = re.search(r"使用シューズ\s*[：:]\s*(.+)", content)
 
