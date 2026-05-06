@@ -21,3 +21,9 @@
 ```
 claude "先週月曜から日曜のランログをもとに、weekly-summary-prompt.mdのルールに従ってnote記事の下書きを生成して。出力はdrafts/YYYY-MM-DD.mdに保存して"
 ```
+
+## TODO
+
+- [ ] `telegram-running-bot` の距離単位出力を `km`（小文字）に統一する
+  - bot が `KM`（大文字）で出力することがあり、集計スクリプトが拾えないケースがあった
+  - `running-logs` 側は `re.IGNORECASE` で暫定対応済み（2026-05-06）
