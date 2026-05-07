@@ -4,8 +4,9 @@
 
 ## ファイル構成
 
-- `logs/YYYY-MM-DD.md` — 日別ランログ
+- `logs/YYYY-MM-DD-NN.md` — 日別ランログ（telegram-running-botが書き込み）
 - `drafts/YYYY-MM-DD.md` — 週次まとめ記事の下書き（週末日付でファイル名）
+- `plans/YYYY-MM.md` — 月間トレーニングプラン（masa-coach-botが月初に自動生成）
 - `weekly-summary-prompt.md` — まとめ記事の生成ルール・構成定義
 - `images/` — ランの写真
 
@@ -22,8 +23,9 @@
 claude "先週月曜から日曜のランログをもとに、weekly-summary-prompt.mdのルールに従ってnote記事の下書きを生成して。出力はdrafts/YYYY-MM-DD.mdに保存して"
 ```
 
-## TODO
+## 距離フォーマットについて
 
-- [ ] `telegram-running-bot` の距離単位出力を `km`（小文字）に統一する
-  - bot が `KM`（大文字）で出力することがあり、集計スクリプトが拾えないケースがあった
-  - `running-logs` 側は `re.IGNORECASE` で暫定対応済み（2026-05-06）
+- ログの距離フィールドは `6.14km`（小文字）で記録される
+- Geminiが `KM`（大文字）で出力するケースがあったが、2026-05-07 に両側を修正済み
+  - `telegram-running-bot`：JSON.parse後に `p.kyori.toLowerCase()` で正規化
+  - `scripts/update_monthly_summary.py`：`re.IGNORECASE` で集計側も大文字対応済み
