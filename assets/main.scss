@@ -291,7 +291,7 @@ body {
   border-radius: 6px;
   padding: 18px 24px;
   display: grid;
-  grid-template-columns: 140px 90px 100px 1fr;
+  grid-template-columns: 140px minmax(90px, auto) 100px 1fr;
   align-items: center;
   gap: 20px;
   text-decoration: none;
@@ -318,6 +318,7 @@ body {
   font-size: 28px;
   font-weight: 700;
   color: var(--navy);
+  white-space: nowrap;
 }
 
 .log-time-val {

@@ -451,7 +451,7 @@ title: Stats — MASA Running Logs
   const thisWeekKey = getISOWeek(today);
   const thisWeekData = stats.weekly.find(w => w.week === thisWeekKey);
 
-  document.getElementById('total-km').innerHTML      = totalKm.toFixed(1) + '<span class="card-unit"> km</span>';
+  document.getElementById('total-km').innerHTML      = Number(totalKm.toFixed(1)).toLocaleString('ja-JP') + '<span class="card-unit"> km</span>';
   document.getElementById('this-month-km').innerHTML = (thisMonthData ? thisMonthData.km.toFixed(1) : '0.0') + '<span class="card-unit"> km</span>';
   document.getElementById('this-week-km').innerHTML  = (thisWeekData  ? thisWeekData.km.toFixed(1)  : '0.0') + '<span class="card-unit"> km</span>';
   document.getElementById('total-runs').innerHTML    = totalRuns + '<span class="card-unit"> runs</span>';
