@@ -534,8 +534,8 @@ title: Stats — MASA Running Logs
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${s.shoe}</td>
-      <td class="km-cell">${Number(s.km.toFixed(1)).toLocaleString('ja-JP')} km</td>
-      <td>${s.count} 本</td>
+      <td class="km-cell">${s.km.toLocaleString('ja-JP', {minimumFractionDigits:1, maximumFractionDigits:1})} km</td>
+      <td style="white-space:nowrap">${s.count}本</td>
       <td>
         <div class="shoe-bar-wrap">
           <div class="shoe-bar" style="width:${pct}%; max-width:120px"></div>
