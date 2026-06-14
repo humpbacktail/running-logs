@@ -2,7 +2,7 @@ name: 週次まとめ下書き生成
 
 on:
   schedule:
-    - cron: '0 0 * * 3'  # 毎週水曜 9:00 JST（UTC 0:00）
+    - cron: '0 22 * * 1'  # 毎週火曜 7:00 JST（月曜UTC 22:00）
   workflow_dispatch:      # 手動実行も可能
 
 jobs:
