@@ -12,7 +12,7 @@
 
 ## 週次まとめの生成方法
 
-毎週水曜 9:00 JST に GitHub Actions（`.github/workflows/weekly-draft.yml`）が自動実行し、前週月〜日のランログをもとに `drafts/YYYY-MM-DD.md`（日曜日付）を生成・コミットする。
+毎週**火曜 7:00 JST**に GitHub Actions（`.github/workflows/weekly-draft.yml`）が自動実行し、前週月〜日のランログをもとに `drafts/YYYY-MM-DD.md`（日曜日付）を生成・コミットする。（2026-06-15変更、旧：水曜9:00）
 
 - モデル：claude-sonnet-4-6
 - 生成ルール：`weekly-summary-prompt.md` を参照

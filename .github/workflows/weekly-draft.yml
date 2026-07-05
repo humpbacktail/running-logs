@@ -57,6 +57,19 @@ jobs:
           with open("weekly-summary-prompt.md", encoding="utf-8") as f:
               rules = f.read()
 
+          # ランナープロフィール（単一ソース = profile.json）を読み込んで文脈に注入
+          import json
+          profile_ctx = ""
+          try:
+              with open("profile.json", encoding="utf-8") as pf:
+                  p = json.load(pf)
+              b = p.get("bests", {})
+              bests = "\n".join(f"- {label}: {b[k]['time']}（{b[k]['race']}）" for label, k in [("フル", "full"), ("ハーフ", "half"), ("30km", "30k"), ("10km", "10k")] if k in b)
+              goals = "\n".join(f"- {g['date']} {g['name']}（目標：{g['goal']}）" for g in p.get("goal_races", []))
+              profile_ctx = f"\n\n## ランナープロフィール（参考）\nベスト記録:\n{bests}\n目標レース:\n{goals}\n"
+          except Exception as e:
+              print(f"profile.json読み込みスキップ: {e}")
+
           # Claude API で下書き生成
           client = anthropic.Anthropic()
           message = client.messages.create(
@@ -65,7 +78,7 @@ jobs:
               messages=[{
                   "role": "user",
                   "content": f"""{rules}
-
+          {profile_ctx}
           ---
 
           ## 対象期間
