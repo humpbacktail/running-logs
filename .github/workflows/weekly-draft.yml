@@ -70,6 +70,19 @@ jobs:
           except Exception as e:
               print(f"profile.json読み込みスキップ: {e}")
 
+          # 今週のコーチとの対話（coach-botが日曜Cronで conversations/<日曜日付>.md に書き出す）
+          conv_ctx = ""
+          conv_path = f"conversations/{end_str}.md"
+          try:
+              with open(conv_path, encoding="utf-8") as cf:
+                  conv_body = cf.read()
+              conv_ctx = f"\n\n## 今週のコーチとの対話\n以下はMasaとコーチbotの実際のやり取り。記事の「対話」「気づき」として自然に織り込んでよい（そのまま引用せず咀嚼する）。\n{conv_body}\n"
+              print(f"✅ 対話ログを読み込み: {conv_path}")
+          except FileNotFoundError:
+              print(f"（対話ログなし: {conv_path} — スキップ）")
+          except Exception as e:
+              print(f"{conv_path}読み込みスキップ: {e}")
+
           # Claude API で下書き生成
           client = anthropic.Anthropic()
           message = client.messages.create(
@@ -79,6 +92,7 @@ jobs:
                   "role": "user",
                   "content": f"""{rules}
           {profile_ctx}
+          {conv_ctx}
           ---
 
           ## 対象期間
