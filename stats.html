@@ -532,14 +532,22 @@ title: Stats — MASA Running Logs
   });
 
   // --- シューズテーブル ---
-  const maxShoeKm = stats.shoes.length > 0 ? stats.shoes[0].km : 1;
+  // 比率は「現役シューズの距離合計」を分母にした距離ベースの割合（現役だけで合計100%）。
+  // 「不明」はシューズ管理を始める前のログで、これから増えることもないため分母から除外し、
+  // 一番下にグレーで参考表示する（走行距離・本数は出すが比率は「—」）。
+  const fmtKm = km => km.toLocaleString('ja-JP', {minimumFractionDigits:1, maximumFractionDigits:1});
+  const activeShoes  = stats.shoes.filter(s => s.shoe !== '不明');
+  const unknownShoes = stats.shoes.filter(s => s.shoe === '不明');
+  const activeTotalKm = activeShoes.reduce((sum, s) => sum + s.km, 0) || 1;
   const tbody = document.getElementById('shoe-table-body');
-  stats.shoes.forEach(s => {
-    const pct = Math.round((s.km / maxShoeKm) * 100);
+
+  // 現役シューズ（距離降順・現役合計を100%とした割合）
+  activeShoes.forEach(s => {
+    const pct = Math.round((s.km / activeTotalKm) * 100);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${s.shoe}</td>
-      <td class="km-cell">${s.km.toLocaleString('ja-JP', {minimumFractionDigits:1, maximumFractionDigits:1})} km</td>
+      <td class="km-cell">${fmtKm(s.km)} km</td>
       <td style="white-space:nowrap">${s.count}本</td>
       <td>
         <div class="shoe-bar-wrap">
@@ -547,6 +555,18 @@ title: Stats — MASA Running Logs
           <span style="font-size:0.75rem;color:#64748b;font-family:'Space Mono',monospace">${pct}%</span>
         </div>
       </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // 不明（管理開始前）＝一番下にグレー表示。比率は分母から外すので「—」。
+  unknownShoes.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:#94a3b8">${s.shoe}<span style="font-size:0.7rem;color:#94a3b8"> (管理開始前)</span></td>
+      <td class="km-cell" style="color:#94a3b8">${fmtKm(s.km)} km</td>
+      <td style="white-space:nowrap;color:#94a3b8">${s.count}本</td>
+      <td><span style="font-size:0.85rem;color:#94a3b8;font-family:'Space Mono',monospace">—</span></td>
     `;
     tbody.appendChild(tr);
   });
