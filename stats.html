@@ -139,6 +139,42 @@ title: Stats — MASA Running Logs
     color: #64748b;
   }
 
+  /* ---- 今月ヒーロー ---- */
+  .month-hero {
+    background: linear-gradient(135deg, #1e3a5f, #2563eb);
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    color: #fff;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 16px rgba(37,99,235,0.25);
+  }
+  .month-hero-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+  }
+  .month-hero-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .month-hero-unit {
+    font-size: 1.2rem;
+    font-weight: 400;
+    opacity: 0.85;
+  }
+  .month-hero-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-top: 0.6rem;
+  }
+
   /* ---- Chart Container ---- */
   .chart-wrap {
     background: #fff;
@@ -369,14 +405,20 @@ title: Stats — MASA Running Logs
       </div>
     </div>
 
-    <!-- 月間グラフ -->
+    <!-- 今月の走行距離 -->
     <div class="section-header">
-      <h2>📅 月間走行距離</h2>
-      <div class="section-sub">// Monthly Distance</div>
+      <h2>📅 今月の走行距離</h2>
+      <div class="section-sub">// This Month</div>
+    </div>
+
+    <div class="month-hero">
+      <div class="month-hero-label" id="hero-label">今月の走行距離</div>
+      <div class="month-hero-value"><span id="hero-km">—</span><span class="month-hero-unit"> KM</span></div>
+      <div class="month-hero-sub" id="hero-sub">—</div>
     </div>
 
     <div class="chart-wrap">
-      <div class="chart-title">月別 走行距離 (km)</div>
+      <div class="chart-title">月別の推移 (km)</div>
       <canvas id="monthly-chart" height="200"></canvas>
     </div>
 
@@ -461,6 +503,13 @@ title: Stats — MASA Running Logs
   document.getElementById('this-month-km').innerHTML = (thisMonthData ? thisMonthData.km.toFixed(1) : '0.0') + '<span class="card-unit"> km</span>';
   document.getElementById('this-week-km').innerHTML  = (thisWeekData  ? thisWeekData.km.toFixed(1)  : '0.0') + '<span class="card-unit"> km</span>';
   document.getElementById('total-runs').innerHTML    = totalRuns + '<span class="card-unit"> runs</span>';
+
+  // --- 今月ヒーロー ---
+  document.getElementById('hero-label').textContent = `${today.getFullYear()}年${today.getMonth()+1}月`;
+  document.getElementById('hero-km').textContent    = thisMonthData ? thisMonthData.km.toFixed(1) : '0.0';
+  document.getElementById('hero-sub').textContent   = thisMonthData
+    ? `${thisMonthData.count}ラン · 平均 ${thisMonthData.pace}`
+    : '今月はまだ記録なし';
 
   // Chart.js 共通設定
   Chart.defaults.font.family = "'Space Mono', monospace";
