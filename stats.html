@@ -418,7 +418,18 @@ title: Stats — MASA Running Logs
     </div>
 
     <div class="chart-wrap">
-      <div class="chart-title">月別の推移 (km)</div>
+      <div class="chart-title" id="daily-chart-title">今月の日別 (km)</div>
+      <canvas id="daily-chart" height="200"></canvas>
+    </div>
+
+    <!-- 月別の推移 -->
+    <div class="section-header">
+      <h2>📊 月別の推移</h2>
+      <div class="section-sub">// Monthly Trend</div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">月別 走行距離 (km)</div>
       <canvas id="monthly-chart" height="200"></canvas>
     </div>
 
@@ -535,7 +546,38 @@ title: Stats — MASA Running Logs
     }
   });
 
-  // --- 月間グラフ（古い順） ---
+  // --- 今月の日別グラフ（Nikeの「月」タブ相当・横軸=日） ---
+  const [hmY, hmMo] = thisMonthKey.split('-').map(Number);
+  const daysInMonth = new Date(hmY, hmMo, 0).getDate();
+  const dailyArr = (stats.daily_by_month && stats.daily_by_month[thisMonthKey]) || [];
+  const dailyMap = {};
+  dailyArr.forEach(e => { dailyMap[e.day] = e.km; });
+  const dailyLabels = [], dailyValues = [];
+  for (let dd = 1; dd <= daysInMonth; dd++) { dailyLabels.push(dd); dailyValues.push(dailyMap[dd] || 0); }
+  const todayDate = today.getDate();
+  document.getElementById('daily-chart-title').textContent = `今月の日別 (km) — ${hmMo}月`;
+  new Chart(document.getElementById('daily-chart'), {
+    type: 'bar',
+    data: {
+      labels: dailyLabels,
+      datasets: [{
+        label: '日別距離',
+        data: dailyValues,
+        backgroundColor: dailyLabels.map(d => d === todayDate ? '#2563eb' : 'rgba(96,165,250,0.6)'),
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      ...chartOpts('日別距離', '#3b82f6'),
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 10 }, callback: v => v + ' km' } }
+      }
+    }
+  });
+
+  // --- 月別の推移グラフ（古い順） ---
   const monthlyData = [...stats.monthly].reverse();
   new Chart(document.getElementById('monthly-chart'), {
     type: 'bar',

@@ -269,6 +269,7 @@ def generate_stats_json():
     monthly = defaultdict(lambda: {"km": 0.0, "sec": 0, "count": 0})
     weekly  = defaultdict(lambda: {"km": 0.0, "sec": 0, "count": 0, "monday": None, "sunday": None})
     shoes   = defaultdict(lambda: {"km": 0.0, "count": 0})
+    daily   = defaultdict(lambda: defaultdict(float))  # "YYYY-MM" -> {日(int): km}
 
     for fname in sorted(os.listdir(LOGS_DIR)):
         if not fname.endswith(".md") or fname == "index.md":
@@ -287,6 +288,9 @@ def generate_stats_json():
         monthly[mkey]["km"]    += km
         monthly[mkey]["sec"]   += sec
         monthly[mkey]["count"] += 1
+
+        # 日別（月内グラフ用）
+        daily[mkey][dd] += km
 
         # 週間
         iy, iw, wd_iso = d.isocalendar()
@@ -345,11 +349,20 @@ def generate_stats_json():
             "count": v["count"],
         })
 
+    # 日別（月内グラフ用・直近3ヶ月分だけ。{"YYYY-MM": [{"day":1,"km":6.1}, ...]}）
+    daily_by_month = {}
+    for mk in sorted(monthly.keys(), reverse=True)[:3]:
+        daily_by_month[mk] = [
+            {"day": day, "km": round(v, 1)}
+            for day, v in sorted(daily[mk].items())
+        ]
+
     stats = {
         "generated_at": date.today().strftime("%Y-%m-%d"),
         "monthly": monthly_list,
         "weekly": weekly_list,
         "shoes": shoe_list,
+        "daily_by_month": daily_by_month,
     }
 
     with open(STATS_JSON_PATH, "w", encoding="utf-8") as f:
