@@ -358,8 +358,8 @@ def generate_stats_json():
             "km": round(v["km"], 1),
             "count": v["count"],
         }
-        if name in pre_log:
-            item["total_km"] = round(float(pre_log[name]) + v["km"], 1)
+        if name != "不明":  # 新しいシューズ（下駄なし）は通算＝ログ距離
+            item["total_km"] = round(float(pre_log.get(name, 0)) + v["km"], 1)
         shoe_list.append(item)
 
     # 日別（月内グラフ用・直近3ヶ月分だけ。{"YYYY-MM": [{"day":1,"km":6.1}, ...]}）
