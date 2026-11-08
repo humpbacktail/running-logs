@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-01",
+  "generated_at": "2026-11-08",
   "monthly": [
     {
       "month": "2026-11",
@@ -329,27 +329,32 @@
     {
       "shoe": "スーパーノヴァ",
       "km": 672.5,
-      "count": 58
+      "count": 58,
+      "total_km": 1026.0
     },
     {
       "shoe": "インフィニットプロ",
       "km": 410.2,
-      "count": 60
+      "count": 60,
+      "total_km": 1313.0
     },
     {
       "shoe": "マジックスピード4",
       "km": 350.9,
-      "count": 32
+      "count": 32,
+      "total_km": 410.2
     },
     {
       "shoe": "ボストン12",
       "km": 323.4,
-      "count": 25
+      "count": 25,
+      "total_km": 759.7
     },
     {
       "shoe": "ワラーチ",
       "km": 30.0,
-      "count": 5
+      "count": 5,
+      "total_km": 173.8
     }
   ],
   "daily_by_month": {
