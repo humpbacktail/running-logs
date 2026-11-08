@@ -232,9 +232,22 @@ title: Stats — MASA Running Logs
     white-space: nowrap;
     text-align: right;
   }
-  .shoe-table td:nth-child(3) {
+  .shoe-table td:nth-child(4) {
     text-align: right;
     white-space: nowrap;
+  }
+  /* 通算距離（NIKEアプリ時代＋ログ）＝買い替え判断用。ログ距離より控えめな色 */
+  .shoe-table td.total-cell {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    color: #1e3a5f;
+    white-space: nowrap;
+    text-align: right;
+  }
+  .shoe-note {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 0.5rem;
   }
 
   .shoe-bar-wrap {
@@ -351,6 +364,10 @@ title: Stats — MASA Running Logs
     .summary-cards { grid-template-columns: repeat(2, 1fr); }
     .mini-stats-grid { grid-template-columns: 1fr 1fr; }
     .stats-hero { padding: 2.5rem 1.25rem 5rem; }
+    .shoe-table th, .shoe-table td { padding: 0.6rem 0.4rem; font-size: 0.8rem; }
+    .shoe-table th { font-size: 0.65rem; letter-spacing: 0; }
+    /* スマホでは比率列を隠して4列（従来と同じ列数）に収める */
+    .shoe-table th:nth-child(5), .shoe-table td:nth-child(5) { display: none; }
   }
 </style>
 
@@ -454,7 +471,8 @@ title: Stats — MASA Running Logs
       <thead>
         <tr>
           <th>シューズ</th>
-          <th>走行距離</th>
+          <th>通算</th>
+          <th>ログ距離</th>
           <th>本数</th>
           <th>比率</th>
         </tr>
@@ -462,6 +480,7 @@ title: Stats — MASA Running Logs
       <tbody id="shoe-table-body">
       </tbody>
     </table>
+    <div class="shoe-note">通算＝ランニングログ開始前（NIKEアプリ管理時代）の距離＋ログの距離。本数・比率はログ分のみ。</div>
 
   </div><!-- /stats-main -->
 </div><!-- /stats-content -->
@@ -638,6 +657,7 @@ title: Stats — MASA Running Logs
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${s.shoe}</td>
+      <td class="total-cell">${s.total_km != null ? fmtKm(s.total_km) + ' km' : '—'}</td>
       <td class="km-cell">${fmtKm(s.km)} km</td>
       <td style="white-space:nowrap">${s.count}本</td>
       <td>
@@ -655,6 +675,7 @@ title: Stats — MASA Running Logs
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="color:#94a3b8">${s.shoe}<span style="font-size:0.7rem;color:#94a3b8"> (管理開始前)</span></td>
+      <td class="total-cell" style="color:#94a3b8">—</td>
       <td class="km-cell" style="color:#94a3b8">${fmtKm(s.km)} km</td>
       <td style="white-space:nowrap;color:#94a3b8">${s.count}本</td>
       <td><span style="font-size:0.85rem;color:#94a3b8;font-family:'Space Mono',monospace">—</span></td>

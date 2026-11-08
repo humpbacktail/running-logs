@@ -9,6 +9,7 @@ README_PATH = os.path.join(SCRIPT_DIR, "../README.md")
 LOGS_DIR = os.path.join(SCRIPT_DIR, "../logs")
 INDEX_PATH = os.path.join(SCRIPT_DIR, "../index.html")
 STATS_JSON_PATH = os.path.join(SCRIPT_DIR, "../stats.json")
+PROFILE_JSON_PATH = os.path.join(SCRIPT_DIR, "../profile.json")
 
 TIME_RE = re.compile(r"時間:\s*([0-9]{1,2}:[0-5][0-9](?::[0-5][0-9])?)")
 DIST_RE = re.compile(r"距離:\s*([0-9]+(?:\.[0-9]+)?)\s*km", re.IGNORECASE)
@@ -341,13 +342,25 @@ def generate_stats_json():
         })
 
     # シューズ別リスト（距離降順）
+    # 通算距離 = ログ開始前（NIKEアプリ時代）の距離 profile.json shoe_pre_log_km + ログの距離。
+    # 本数はログ分しか分からないので、km/count はログ分のまま触らない（total_km は別キー）。
+    pre_log = {}
+    try:
+        with open(PROFILE_JSON_PATH, encoding="utf-8") as f:
+            pre_log = json.load(f).get("shoe_pre_log_km", {}) or {}
+    except (OSError, ValueError) as e:
+        print(f"⚠️ profile.json の shoe_pre_log_km を読めませんでした: {e}")
+
     shoe_list = []
     for name, v in sorted(shoes.items(), key=lambda x: x[1]["km"], reverse=True):
-        shoe_list.append({
+        item = {
             "shoe": name,
             "km": round(v["km"], 1),
             "count": v["count"],
-        })
+        }
+        if name in pre_log:
+            item["total_km"] = round(float(pre_log[name]) + v["km"], 1)
+        shoe_list.append(item)
 
     # 日別（月内グラフ用・直近3ヶ月分だけ。{"YYYY-MM": [{"day":1,"km":6.1}, ...]}）
     daily_by_month = {}

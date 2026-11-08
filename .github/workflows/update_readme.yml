@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'logs/**.md'
+      - 'profile.json'
+      - 'scripts/update_monthly_summary.py'
   workflow_dispatch:
 
 permissions:
