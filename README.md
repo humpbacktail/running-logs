@@ -62,7 +62,7 @@
 </details>
 
 <details>
-<summary>📆 2026-W40（09/28–10/04） — 27.4 km / 4回 / 平均 5'45"/km</summary>
+<summary>📆 2026-W40（09/28–10/04） — 27.4 km / 3回 / 平均 5'45"/km</summary>
 
 - 最長: 15.2 km — [2026-10-04-02](logs/2026-10-04-02.md)
 </details>
