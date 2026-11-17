@@ -3,6 +3,7 @@ import re
 import json
 from collections import defaultdict
 from datetime import date, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 README_PATH = os.path.join(SCRIPT_DIR, "../README.md")
@@ -30,7 +31,6 @@ def parse_log_file(filepath):
     time_hms_match = re.search(r"時間\s*[：:]\s*(\d{1,2}):(\d{2}):(\d{2})", content)
     shoe_match = re.search(r"使用シューズ\s*[：:]\s*(.+)", content)
 
-    print(f"[DEBUG] {os.path.basename(filepath)} -> {time_hms_match.groups() if time_hms_match else '時間見つからず'}")
 
     distance = float(distance_match.group(1)) if distance_match else 0.0
     shoe = shoe_match.group(1).strip() if shoe_match else "不明"
@@ -43,39 +43,84 @@ def parse_log_file(filepath):
 
     return distance, duration, shoe
 
-def format_pace(total_time, total_km):
-    if total_km == 0 or total_time.total_seconds() == 0:
-        return "--"
-    seconds_per_km = total_time.total_seconds() / total_km
-    minutes = int(seconds_per_km // 60)
-    seconds = int(seconds_per_km % 60)
-    return f"{minutes}'{seconds:02}/km"
+def format_pace(total_sec, total_km):
+    """平均ペース（秒/km を四捨五入）。README・stats.json 共通で使う。km は丸める前の値を渡すこと。"""
+    total_km = float(total_km)
+    if total_km <= 0 or total_sec <= 0:
+        return "-"
+    m, s = divmod(int(round(total_sec / total_km)), 60)
+    return f"{m}'{s:02d}\"/km"
 
-def generate_summary_markdown():
-    totals = defaultdict(lambda: {"distance": 0.0, "time": timedelta()})
 
-    for filename in os.listdir(LOGS_DIR):
-        if filename.endswith(".md"):
-            match = re.match(r"(\d{4})-(\d{2})-\d{2}", filename)
-            if not match:
-                continue
-            year, month = match.group(1), match.group(2)
-            key = f"{year}年{month}月"
-            distance, time, _ = parse_log_file(os.path.join(LOGS_DIR, filename))
-            totals[key]["distance"] += distance
-            totals[key]["time"] += time
+def round_km(km):
+    """表示用に小数第1位へ四捨五入（内部の合計は Decimal のまま持つ）"""
+    return float(Decimal(km).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
 
+
+def collect_runs(logs_dir=None):
+    """集計に使う「走った記録」を日付順に返す。
+    距離が入っていないログ（例：2026-09-30-01＝睡眠画面だけ）は表示一覧には残すが、走行実績には含めない。"""
+    logs_dir = logs_dir or LOGS_DIR
+    runs = []
+    for fname in sorted(os.listdir(logs_dir)):
+        if not fname.endswith(".md") or fname == "index.md":
+            continue
+        m = re.match(r"(\d{4})-(\d{2})-(\d{2})", fname)
+        if not m:
+            continue
+        km, duration, shoe = parse_log_file(os.path.join(logs_dir, fname))
+        if km <= 0:
+            continue
+        runs.append({
+            "fname": fname,
+            "date": date(*map(int, m.groups())),
+            "km": Decimal(str(km)),  # 加算順で丸めがぶれないよう Decimal で合計する
+            "sec": int(duration.total_seconds()),
+            "shoe": shoe,
+        })
+    return runs
+
+
+def aggregate_runs(runs):
+    """月・週・シューズ・日別の合計。README と stats.json は必ずこの結果から作る（数値の食い違い防止）。"""
+    monthly = defaultdict(lambda: {"km": Decimal(0), "sec": 0, "count": 0})
+    weekly = defaultdict(lambda: {"km": Decimal(0), "sec": 0, "count": 0,
+                                  "monday": None, "sunday": None,
+                                  "longest_km": Decimal(0), "longest_file": None})
+    shoes = defaultdict(lambda: {"km": Decimal(0), "count": 0})
+    daily = defaultdict(lambda: defaultdict(Decimal))  # "YYYY-MM" -> {日(int): km}
+
+    for r in runs:
+        d = r["date"]
+        mkey = f"{d.year}-{d.month:02d}"
+        mo = monthly[mkey]
+        mo["km"] += r["km"]; mo["sec"] += r["sec"]; mo["count"] += 1
+        daily[mkey][d.day] += r["km"]
+
+        iy, iw, wd = d.isocalendar()
+        w = weekly[f"{iy}-W{iw:02d}"]
+        w["km"] += r["km"]; w["sec"] += r["sec"]; w["count"] += 1
+        if w["monday"] is None:
+            w["monday"] = d - timedelta(days=wd - 1)
+            w["sunday"] = w["monday"] + timedelta(days=6)
+        if r["km"] > w["longest_km"]:
+            w["longest_km"], w["longest_file"] = r["km"], r["fname"]
+
+        shoes[r["shoe"]]["km"] += r["km"]
+        shoes[r["shoe"]]["count"] += 1
+
+    return {"monthly": monthly, "weekly": weekly, "shoes": shoes, "daily": daily}
+
+
+def generate_summary_markdown(agg=None):
+    agg = agg or aggregate_runs(collect_runs())
     lines = []
-    for ym in sorted(totals.keys(), reverse=True):
-        total_km = round(totals[ym]["distance"], 1)
-        total_time = totals[ym]["time"]
-        pace = format_pace(total_time, total_km)
-        hours = int(total_time.total_seconds() // 3600)
-        minutes = int((total_time.total_seconds() % 3600) // 60)
-        lines.append(f"- **{ym}**: 距離 **{total_km} km**, 時間 **{hours}時間{minutes}分**, 平均ペース **{pace}**")
-
+    for mkey in sorted(agg["monthly"].keys(), reverse=True):
+        v = agg["monthly"][mkey]
+        y, mo = mkey.split("-")
+        hours, minutes = v["sec"] // 3600, (v["sec"] % 3600) // 60
+        lines.append(f"- **{y}年{mo}月**: 距離 **{round_km(v['km'])} km**, 時間 **{hours}時間{minutes}分**, 平均ペース **{format_pace(v['sec'], v['km'])}**")
     return "\n".join(lines)
-
 
 def generate_record_list_markdown():
     logs_by_month = defaultdict(list)
@@ -106,67 +151,20 @@ def generate_record_list_markdown():
 
     return "\n".join(blocks)
 
-def _format_pace(total_sec, total_km):
-    if total_km <= 0:
-        return "-"
-    spk = total_sec / total_km
-    m, s = divmod(int(round(spk)), 60)
-    return f"{m}'{s:02d}\"/km"
-
-def generate_weekly_summary_markdown(LOGS_DIR: str) -> str:
-    weeks = defaultdict(lambda: {
-        "km": 0.0, "sec": 0, "count": 0,
-        "longest_km": 0.0, "longest_file": None,
-        "monday": None, "sunday": None
-    })
-
-    for fname in os.listdir(LOGS_DIR):
-        if not fname.endswith(".md"):
-            continue
-        m = re.match(r"(\d{4})-(\d{2})-(\d{2})", fname)
-        if not m:
-            continue
-
-        y, mo, dd = map(int, m.groups())
-        d = date(y, mo, dd)
-
-        km, duration, _ = parse_log_file(os.path.join(LOGS_DIR, fname))
-        if km <= 0:
-            continue  # 距離が入っていないログ（睡眠画面だけ等）は走った回数に数えない
-        sec = int(duration.total_seconds())
-
-        iy, iw, _ = d.isocalendar()
-        key = (iy, iw)
-        w = weeks[key]
-        w["km"]   += km
-        w["sec"]  += sec
-        w["count"] += 1
-        if km > w["longest_km"]:
-            w["longest_km"]   = km
-            w["longest_file"] = fname
-
-        wd = d.isoweekday()
-        mon = d - timedelta(days=wd - 1)
-        sun = mon + timedelta(days=6)
-        w["monday"] = mon if w["monday"] is None or mon < w["monday"] else w["monday"]
-        w["sunday"] = sun if w["sunday"] is None or sun > w["sunday"] else w["sunday"]
-
+def generate_weekly_summary_markdown(agg=None) -> str:
+    agg = agg or aggregate_runs(collect_runs())
     lines = []
-    for (iy, iw), w in sorted(weeks.items(), key=lambda kv: kv[0], reverse=True):
-        km = round(w["km"], 1)
-        pace = _format_pace(w["sec"], w["km"])
-        mon = w["monday"].strftime("%m/%d") if w["monday"] else "??/??"
-        sun = w["sunday"].strftime("%m/%d") if w["sunday"] else "??/??"
-
+    for wkey, w in sorted(agg["weekly"].items(), reverse=True):
+        mon = w["monday"].strftime("%m/%d")
+        sun = w["sunday"].strftime("%m/%d")
         lines.append("<details>")
         lines.append(
-            f"<summary>📆 {iy}-W{iw:02d}（{mon}–{sun}） — {km} km / {w['count']}回 / 平均 {pace}</summary>\n"
+            f"<summary>📆 {wkey}（{mon}–{sun}） — {round_km(w['km'])} km / {w['count']}回 / 平均 {format_pace(w['sec'], w['km'])}</summary>\n"
         )
         if w["longest_file"]:
             label = w["longest_file"].replace(".md", "")
-            lines.append(f"- 最長: {w['longest_km']:.1f} km — [{label}](logs/{w['longest_file']})")
+            lines.append(f"- 最長: {round_km(w['longest_km'])} km — [{label}](logs/{w['longest_file']})")
         lines.append("</details>\n")
-
     return "\n".join(lines)
 
 
@@ -266,84 +264,23 @@ def generate_recent_logs_markdown(n=5):
 # ★ 新機能: stats.json の生成
 # ============================================================
 
-def generate_stats_json():
+def generate_stats_json(agg=None):
     """月間・週間・シューズ別の集計データをJSONで出力"""
-
-    monthly = defaultdict(lambda: {"km": 0.0, "sec": 0, "count": 0})
-    weekly  = defaultdict(lambda: {"km": 0.0, "sec": 0, "count": 0, "monday": None, "sunday": None})
-    shoes   = defaultdict(lambda: {"km": 0.0, "count": 0})
-    daily   = defaultdict(lambda: defaultdict(float))  # "YYYY-MM" -> {日(int): km}
-
-    for fname in sorted(os.listdir(LOGS_DIR)):
-        if not fname.endswith(".md") or fname == "index.md":
-            continue
-        m = re.match(r"(\d{4})-(\d{2})-(\d{2})", fname)
-        if not m:
-            continue
-
-        y, mo, dd = map(int, m.groups())
-        d = date(y, mo, dd)
-        km, duration, shoe = parse_log_file(os.path.join(LOGS_DIR, fname))
-        if km <= 0:
-            continue  # 距離が入っていないログ（例：2026-09-30-01＝睡眠画面だけ）は月・週・シューズの回数に数えない
-        sec = int(duration.total_seconds())
-
-        # 月間
-        mkey = f"{y}-{mo:02d}"
-        monthly[mkey]["km"]    += km
-        monthly[mkey]["sec"]   += sec
-        monthly[mkey]["count"] += 1
-
-        # 日別（月内グラフ用）
-        daily[mkey][dd] += km
-
-        # 週間
-        iy, iw, wd_iso = d.isocalendar()
-        wkey = f"{iy}-W{iw:02d}"
-        mon = d - timedelta(days=wd_iso - 1)
-        sun = mon + timedelta(days=6)
-        weekly[wkey]["km"]    += km
-        weekly[wkey]["sec"]   += sec
-        weekly[wkey]["count"] += 1
-        if weekly[wkey]["monday"] is None:
-            weekly[wkey]["monday"] = mon.strftime("%Y-%m-%d")
-            weekly[wkey]["sunday"] = sun.strftime("%Y-%m-%d")
-
-        # シューズ別
-        shoes[shoe]["km"]    += km
-        shoes[shoe]["count"] += 1
-
-    def to_pace(sec, km):
-        if km <= 0: return "-"
-        spk = sec / km
-        mn, s = divmod(int(round(spk)), 60)
-        return f"{mn}'{s:02d}\"/km"
+    agg = agg or aggregate_runs(collect_runs())
+    monthly, weekly, shoes, daily = agg["monthly"], agg["weekly"], agg["shoes"], agg["daily"]
 
     # 月間リスト（新しい順）
-    monthly_list = []
-    for k in sorted(monthly.keys(), reverse=True):
-        v = monthly[k]
-        km_r = round(v["km"], 1)
-        monthly_list.append({
-            "month": k,
-            "km": km_r,
-            "count": v["count"],
-            "pace": to_pace(v["sec"], v["km"]),
-        })
+    monthly_list = [
+        {"month": k, "km": round_km(v["km"]), "count": v["count"], "pace": format_pace(v["sec"], v["km"])}
+        for k, v in sorted(monthly.items(), reverse=True)
+    ]
 
     # 週間リスト（新しい順、直近26週まで）
-    weekly_list = []
-    for k in sorted(weekly.keys(), reverse=True)[:26]:
-        v = weekly[k]
-        km_r = round(v["km"], 1)
-        weekly_list.append({
-            "week": k,
-            "monday": v["monday"],
-            "sunday": v["sunday"],
-            "km": km_r,
-            "count": v["count"],
-            "pace": to_pace(v["sec"], v["km"]),
-        })
+    weekly_list = [
+        {"week": k, "monday": v["monday"].strftime("%Y-%m-%d"), "sunday": v["sunday"].strftime("%Y-%m-%d"),
+         "km": round_km(v["km"]), "count": v["count"], "pace": format_pace(v["sec"], v["km"])}
+        for k, v in sorted(weekly.items(), reverse=True)[:26]
+    ]
 
     # シューズ別リスト（距離降順）
     # 通算距離 = ログ開始前（NIKEアプリ時代）の距離 profile.json shoe_pre_log_km + ログの距離。
@@ -359,18 +296,18 @@ def generate_stats_json():
     for name, v in sorted(shoes.items(), key=lambda x: x[1]["km"], reverse=True):
         item = {
             "shoe": name,
-            "km": round(v["km"], 1),
+            "km": round_km(v["km"]),
             "count": v["count"],
         }
         if name != "不明":  # 新しいシューズ（下駄なし）は通算＝ログ距離
-            item["total_km"] = round(float(pre_log.get(name, 0)) + v["km"], 1)
+            item["total_km"] = round_km(Decimal(str(pre_log.get(name, 0))) + v["km"])
         shoe_list.append(item)
 
     # 日別（月内グラフ用・直近3ヶ月分だけ。{"YYYY-MM": [{"day":1,"km":6.1}, ...]}）
     daily_by_month = {}
     for mk in sorted(monthly.keys(), reverse=True)[:3]:
         daily_by_month[mk] = [
-            {"day": day, "km": round(v, 1)}
+            {"day": day, "km": round_km(v)}
             for day, v in sorted(daily[mk].items())
         ]
 
@@ -420,10 +357,11 @@ def update_index():
     with open(INDEX_PATH, "w", encoding="utf-8") as f:
         f.write(index)
 
-def update_readme():
-    new_summary = generate_summary_markdown()
+def update_readme(agg=None):
+    agg = agg or aggregate_runs(collect_runs())
+    new_summary = generate_summary_markdown(agg)
     new_record_list = generate_record_list_markdown()
-    weekly_md = generate_weekly_summary_markdown(LOGS_DIR)
+    weekly_md = generate_weekly_summary_markdown(agg)
 
     with open(README_PATH, "r", encoding="utf-8") as f:
         readme = f.read()
@@ -465,9 +403,10 @@ def update_readme():
 
 if __name__ == "__main__":
     print("📝 README.md の月間サマリーと記録一覧を更新中...")
-    update_readme()
+    agg = aggregate_runs(collect_runs())  # README と stats.json は同じ集計結果を使う
+    update_readme(agg)
     print("🏆 index.html のベスト記録と最近のログを更新中...")
     update_index()
     print("📊 stats.json を生成中...")
-    generate_stats_json()
+    generate_stats_json(agg)
     print("✅ 完了！")

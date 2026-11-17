@@ -29,3 +29,10 @@ claude "先週月曜から日曜のランログをもとに、weekly-summary-pro
 - Geminiが `KM`（大文字）で出力するケースがあったが、2026-05-07 に両側を修正済み
   - `telegram-running-bot`：JSON.parse後に `p.kyori.toLowerCase()` で正規化
   - `scripts/update_monthly_summary.py`：`re.IGNORECASE` で集計側も大文字対応済み
+
+## 集計（scripts/update_monthly_summary.py）
+
+- README の月間・週次サマリーと stats.json は、`collect_runs()` → `aggregate_runs()` の同じ集計結果から作る（2026-11-17、Codexレビュー指摘で統一）
+- 距離が入っていないログ（例：2026-09-30-01＝睡眠画面だけ）は記録一覧には残すが、回数・距離の集計には入れない
+- 距離の合計は Decimal、表示だけ小数第1位に四捨五入。平均ペースは丸める前の距離で計算
+- テスト：`python3 -m unittest discover -s tests`（GitHub Actions でも集計前に実行。落ちたら README/stats は更新されない）
