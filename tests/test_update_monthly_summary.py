@@ -119,6 +119,19 @@ class StatsTest(unittest.TestCase):
         _, stats = self.run_all()
         self.assertEqual(stats["monthly"][0]["pace"], "6'03\"/km")
 
+    def test_log_without_time_counts_distance_but_not_pace(self):
+        # 距離はあるが時間が空欄（途中ログ）→ 距離・回数には入れ、平均ペースの計算からは外す
+        with open(os.path.join(self.logs, "2026-08-06-01.md"), "w", encoding="utf-8") as f:
+            f.write("---\ntitle: x\n---\n- 距離：12.0km\n- 時間：\n- 使用シューズ：テストシューズ\n")
+        readme, stats = self.run_all()
+        m = stats["monthly"][0]
+        self.assertEqual(m["count"], 5)
+        self.assertEqual(m["km"], 39.6)
+        self.assertEqual(m["pace"], "6'03\"/km")  # 12km を入れて割ると 4'12" と速すぎる値になる
+        week = next(w for w in stats["weekly"] if w["monday"] == "2026-08-03")
+        self.assertEqual(week["pace"], "6'13\"/km")  # 0.15+7.25km / 46:01（12kmは含めない）
+        self.assertIn("平均ペース **6'03\"/km**", readme)
+
     def test_shoe_total_km_keeps_pre_log(self):
         _, stats = self.run_all()
         shoes = {s["shoe"]: s for s in stats["shoes"]}
