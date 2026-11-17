@@ -131,6 +131,8 @@ def generate_weekly_summary_markdown(LOGS_DIR: str) -> str:
         d = date(y, mo, dd)
 
         km, duration, _ = parse_log_file(os.path.join(LOGS_DIR, fname))
+        if km <= 0:
+            continue  # 距離が入っていないログ（睡眠画面だけ等）は走った回数に数えない
         sec = int(duration.total_seconds())
 
         iy, iw, _ = d.isocalendar()
@@ -282,6 +284,8 @@ def generate_stats_json():
         y, mo, dd = map(int, m.groups())
         d = date(y, mo, dd)
         km, duration, shoe = parse_log_file(os.path.join(LOGS_DIR, fname))
+        if km <= 0:
+            continue  # 距離が入っていないログ（例：2026-09-30-01＝睡眠画面だけ）は月・週・シューズの回数に数えない
         sec = int(duration.total_seconds())
 
         # 月間
