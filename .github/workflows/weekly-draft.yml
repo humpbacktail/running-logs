@@ -77,7 +77,9 @@ jobs:
           try:
               import urllib.request
               req = urllib.request.Request("https://masa-coach-bot.humpbacktail.workers.dev/memos",
-                                           headers={"Authorization": f"Bearer {os.environ.get('COACH_MEMOS_TOKEN', '')}"})
+                                           headers={"Authorization": f"Bearer {os.environ.get('COACH_MEMOS_TOKEN', '')}",
+                                                    # Pythonの既定の名乗り（Python-urllib）はCloudflareに403(1010)で弾かれる
+                                                    "User-Agent": "running-logs-weekly-draft"})
               with urllib.request.urlopen(req, timeout=20) as res:
                   memos = res.read().decode("utf-8")
               memo_ctx = (f"\n\n## Masaの今の状態（コーチのメモ・参考）\n{memos}\n"
