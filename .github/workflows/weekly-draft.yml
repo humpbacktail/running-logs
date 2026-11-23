@@ -25,6 +25,7 @@ jobs:
       - name: Generate weekly draft
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          COACH_MEMOS_TOKEN: ${{ secrets.COACH_MEMOS_TOKEN }}
         run: |
           python - <<'EOF'
           import os
@@ -70,6 +71,22 @@ jobs:
           except Exception as e:
               print(f"profile.json読み込みスキップ: {e}")
 
+          # コーチのメモ（Masaの今の状態。コーチが会話で更新している）。体のことも入るので公開リポジトリには置かず、
+          # コーチbotの合言葉付き窓口 /memos から読む（2026-11-23）。読めなければスキップ（下書き生成は止めない）
+          memo_ctx = ""
+          try:
+              import urllib.request
+              req = urllib.request.Request("https://masa-coach-bot.humpbacktail.workers.dev/memos",
+                                           headers={"Authorization": f"Bearer {os.environ.get('COACH_MEMOS_TOKEN', '')}"})
+              with urllib.request.urlopen(req, timeout=20) as res:
+                  memos = res.read().decode("utf-8")
+              memo_ctx = (f"\n\n## Masaの今の状態（コーチのメモ・参考）\n{memos}\n"
+                          "記事でケガや痛みに触れるのは、上の【ケガ】にあるときだけ（「なし」なら触れない）。"
+                          "【ケガ】が様子見なら、復帰して走れていることを前向きに書く程度にとどめる。\n")
+              print("✅ コーチのメモを読み込み")
+          except Exception as e:
+              print(f"コーチのメモ読み込みスキップ: {e}")
+
           # 今週のコーチとの対話（coach-botが日曜Cronで conversations/<日曜日付>.md に書き出す）
           conv_ctx = ""
           conv_path = f"conversations/{end_str}.md"
@@ -92,6 +109,7 @@ jobs:
                   "role": "user",
                   "content": f"""{rules}
           {profile_ctx}
+          {memo_ctx}
           {conv_ctx}
           ---
 
