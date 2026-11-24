@@ -2,6 +2,18 @@
 
 市民ランナーのランログ管理・週次まとめ記事生成プロジェクト。
 
+## クラウド（スマホ・Web）で作業するとき：最初に記憶を読む
+
+MasaのMacでは `~/.claude` に記憶（経緯・残タスク・合意済みルール）があるが、クラウドのセッションには無い。
+`~/.claude/projects/-Users-yamamotomasaharu/memory/` が存在しない環境なら、**作業を始める前に**次を行う：
+
+1. `git clone --depth 1 https://github.com/humpbacktail/claude-config.git ~/claude-config`（非公開リポジトリ）
+2. `~/claude-config/CLAUDE.md` と `~/claude-config/projects/-Users-yamamotomasaharu/memory/MEMORY.md`（索引）を読み、このリポジトリに関係する `project_*.md` / `feedback_*.md` も読む
+3. 作業中に決まったこと・わかったこと・残タスクは、同じ記憶ファイルに追記し、`git -C ~/claude-config pull --rebase` → commit → push する（Macは次回セッション開始時に自動で取り込む）
+4. cloneやpushができなかったら、黙って進めずMasaに伝える（記憶なしで作業していることを明示する）
+
+`~/Documents/ARCHITECTURE.md` などMac上のファイルはクラウドからは読めない。
+
 ## ファイル構成
 
 - `logs/YYYY-MM-DD-NN.md` — 日別ランログ（telegram-running-botが書き込み）
